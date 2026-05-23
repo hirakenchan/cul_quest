@@ -103,9 +103,9 @@ class App:
 
             return
 
-        # 時間切れ表示中は1秒待つ
+        # 時間切れ表示中の待機時間
         if self.time_up_waiting:
-            self.time_up_timer -= 1
+            self.time_up_timer -= 2
 
             if self.time_up_timer <= 0:
                 self.time_up_waiting = False

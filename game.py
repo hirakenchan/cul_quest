@@ -9,6 +9,8 @@ class App:
     def __init__(self):
         self.fps = 30
         pyxel.init(256, 192, title="Math Quest", fps=self.fps)
+        pyxel.images[0].load(0, 0, "hero.png")
+        pyxel.images[0].load(48, 0, "slime.png")
 
         self.player_max_hp = 5
         self.monster_max_hp = 5
@@ -21,7 +23,7 @@ class App:
         self.input_text = ""
 
         # 制限時間
-        self.time_limit_sec = 10  # 秒数
+        self.time_limit_sec = 20  # 秒数
         self.time_limit = self.time_limit_sec * self.fps
         self.time_left = self.time_limit
 
@@ -247,23 +249,15 @@ class App:
             self.draw_center_text(20, 42, 110, "モンスターを", 8, 10)
             self.draw_center_text(20, 55, 110, "たおした！！", 8, 10)
         else:
-            pyxel.circ(70, 48, 18, 12)
-            pyxel.tri(52, 48, 70, 20, 88, 48, 12)
-            pyxel.circ(63, 45, 2, 0)
-            pyxel.circ(77, 45, 2, 0)
-            pyxel.line(63, 58, 77, 58, 0)
-            self.draw_text(50, 72, "モンスター", 8, 7)
+            pyxel.blt(42, 34, 0, 48, 0, 48, 48, 0)
+            self.draw_text(45, 80, "モンスター", 8, 7)
 
         # 勇者側
         if self.player_defeated:
             self.draw_center_text(170, 45, 90, "GAME OVER ..", 8, 8)
         else:
-            pyxel.rect(170, 40, 16, 24, 11)
-            pyxel.rect(172, 28, 12, 12, 10)
-            pyxel.rect(168, 52, 4, 18, 4)
-            pyxel.rect(186, 52, 4, 18, 4)
-            pyxel.line(190, 42, 205, 28, 7)
-            self.draw_text(163, 72, "ゆうしゃ", 8, 7)
+            pyxel.blt(158, 30, 0, 0, 0, 48, 48, 0)
+            self.draw_text(165, 80, "ゆうしゃ", 8, 7)
 
     def draw_status(self):
         # 左：モンスターHP

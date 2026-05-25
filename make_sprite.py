@@ -36,7 +36,7 @@ square.paste(
 )
 
 # ゲーム用サイズに縮小
-sprite = square.resize((48, 48), Image.Resampling.NEAREST)
+sprite = square.resize((38, 38), Image.Resampling.NEAREST)
 
 # ほぼ黒を透明にする
 data = []

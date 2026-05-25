@@ -9,8 +9,14 @@ class App:
     def __init__(self):
         self.fps = 30
         pyxel.init(256, 192, title="Math Quest", fps=self.fps)
+
+        # 画像サイズ
+        self.sprite_size = 38
+
+        # 画像読み込み
+        # hero.png と slime.png は 38×38 前提
         pyxel.images[0].load(0, 0, "hero.png")
-        pyxel.images[0].load(48, 0, "slime.png")
+        pyxel.images[1].load(0, 0, "slime.png")
 
         self.player_max_hp = 5
         self.monster_max_hp = 5
@@ -23,7 +29,7 @@ class App:
         self.input_text = ""
 
         # 制限時間
-        self.time_limit_sec = 20  # 秒数
+        self.time_limit_sec = 20
         self.time_limit = self.time_limit_sec * self.fps
         self.time_left = self.time_limit
 
@@ -31,11 +37,31 @@ class App:
         self.time_up_waiting = False
         self.time_up_timer = 0
 
+        # モンスター撃破状態
         self.monster_defeated = False
         self.defeat_timer = 0
 
+        # プレイヤー敗北状態
         self.player_defeated = False
         self.game_over_timer = 0
+
+        # 攻撃アニメーション
+        self.attack_animating = False
+        self.attack_timer = 0
+        self.attack_total_frames = 14
+        self.attack_hit_done = False
+        self.hero_attack_dx = 0
+        self.monster_shake_x = 0
+        self.pending_monster_defeat = False
+
+        # モンスター攻撃アニメーション
+        self.monster_attack_animating = False
+        self.monster_attack_timer = 0
+        self.monster_attack_total_frames = 14
+        self.monster_attack_hit_done = False
+        self.monster_attack_dx = 0
+        self.hero_shake_x = 0
+        self.pending_player_defeat = False
 
         # 入力パッドを中央寄せ
         self.button_w = 48
@@ -72,8 +98,6 @@ class App:
 
         self.op = op
         self.input_text = ""
-
-        # 問題が変わるたびに制限時間を戻す
         self.time_left = self.time_limit
 
     def update(self):
@@ -105,9 +129,19 @@ class App:
 
             return
 
+        # 攻撃アニメーション中なら入力を止める
+        if self.attack_animating:
+            self.update_attack_animation()
+            return
+        
+        # モンスター攻撃アニメーション中なら入力を止める
+        if self.monster_attack_animating:
+            self.update_monster_attack_animation()
+            return
+
         # 時間切れ表示中の待機時間
         if self.time_up_waiting:
-            self.time_up_timer -= 2
+            self.time_up_timer -= 1
 
             if self.time_up_timer <= 0:
                 self.time_up_waiting = False
@@ -163,44 +197,131 @@ class App:
     def check_answer(self):
         if self.input_text == "":
             self.message = ""
-            self.message_color = 10  # 黄色
+            self.message_color = 10
             return
 
         if int(self.input_text) == self.answer:
-            self.message = "せいかい！"
-            self.message_color = 8  # 赤色
+            self.input_text = ""
+            self.start_hero_attack()
+            return
+
+        else:
+            self.input_text = ""
+            self.start_monster_attack()
+            return
+
+    def start_hero_attack(self):
+        self.attack_animating = True
+        self.attack_timer = self.attack_total_frames
+        self.attack_hit_done = False
+        self.hero_attack_dx = 0
+        self.monster_shake_x = 0
+        self.pending_monster_defeat = False
+
+        self.message = "せいかい！"
+        self.message_color = 8
+    
+    def start_monster_attack(self):
+        self.monster_attack_animating = True
+        self.monster_attack_timer = self.monster_attack_total_frames
+        self.monster_attack_hit_done = False
+
+        self.monster_attack_dx = 0
+        self.hero_shake_x = 0
+        self.pending_player_defeat = False
+
+        self.message = "まちがい！"
+        self.message_color = 12
+
+
+    def update_monster_attack_animation(self):
+        frame = self.monster_attack_total_frames - self.monster_attack_timer
+
+        # モンスターが少し右へ出る → 少し止まる → 戻る
+        if frame <= 3:
+            self.monster_attack_dx = frame * 3
+        elif frame <= 7:
+            self.monster_attack_dx = 9
+        else:
+            self.monster_attack_dx = max(0, 9 - (frame - 7) * 3)
+
+        # 勇者を少し揺らす
+        if frame in [5, 6, 7]:
+            self.hero_shake_x = -2 if frame % 2 == 1 else 2
+        else:
+            self.hero_shake_x = 0
+
+        # ヒット判定は1回だけ
+        if frame >= 6 and not self.monster_attack_hit_done:
+            self.monster_attack_hit_done = True
+            self.player_hp -= 1
+
+            if self.player_hp <= 0:
+                self.pending_player_defeat = True
+
+        self.monster_attack_timer -= 1
+
+        # アニメーション終了
+        if self.monster_attack_timer <= 0:
+            self.monster_attack_animating = False
+            self.monster_attack_dx = 0
+            self.hero_shake_x = 0
+
+            if self.pending_player_defeat:
+                self.message = ""
+                self.player_defeated = True
+                self.game_over_timer = 90
+                self.input_text = ""
+            else:
+                self.message = ""
+                self.make_question()
+
+    def update_attack_animation(self):
+        frame = self.attack_total_frames - self.attack_timer
+
+        # 勇者が少し左へ出る → 少し止まる → 戻る
+        if frame <= 3:
+            self.hero_attack_dx = -frame * 3
+        elif frame <= 7:
+            self.hero_attack_dx = -9
+        else:
+            self.hero_attack_dx = min(0, -9 + (frame - 7) * 3)
+
+        # スライムを少し揺らす
+        if frame in [5, 6, 7]:
+            self.monster_shake_x = -2 if frame % 2 == 1 else 2
+        else:
+            self.monster_shake_x = 0
+
+        # ヒット判定は1回だけ
+        if frame >= 6 and not self.attack_hit_done:
+            self.attack_hit_done = True
             self.monster_hp -= 1
             self.score += 1
 
             if self.monster_hp <= 0:
+                self.pending_monster_defeat = True
+
+        self.attack_timer -= 1
+
+        # アニメーション終了
+        if self.attack_timer <= 0:
+            self.attack_animating = False
+            self.hero_attack_dx = 0
+            self.monster_shake_x = 0
+
+            if self.pending_monster_defeat:
                 self.message = ""
-                self.message_color = 10  # 黄色
                 self.monster_defeated = True
                 self.defeat_timer = 90
                 self.input_text = ""
-                return
-
-            self.make_question()
-
-        else:
-            self.message = "まちがい！"
-            self.message_color = 12  # 青色
-            self.player_hp -= 1
-            self.input_text = ""
-
-            if self.player_hp <= 0:
+            else:
                 self.message = ""
-                self.message_color = 8
-                self.player_defeated = True
-                self.game_over_timer = 90
-                self.input_text = ""
-                return
-            
-            self.make_question()
-    
+                self.make_question()
+
     def time_up(self):
         self.message = "じかんぎれ！"
-        self.message_color = 12  # 青色
+        self.message_color = 12
         self.player_hp -= 1
         self.input_text = ""
 
@@ -210,17 +331,6 @@ class App:
         # 1秒待機
         self.time_up_waiting = True
         self.time_up_timer = self.fps
-
-        # HPがなくなったらゲームオーバー
-        if self.player_hp <= 0:
-            self.message = ""
-            self.message_color = 8
-            self.player_defeated = True
-            self.game_over_timer = 90
-            return
-
-        # HPが残っていれば次の問題へ
-        self.make_question()
 
     def draw(self):
         pyxel.cls(0)
@@ -244,20 +354,60 @@ class App:
         writer.draw(draw_x, y, text, size, color)
 
     def draw_battle_area(self):
+        monster_x = 50 + self.monster_shake_x + self.monster_attack_dx
+        monster_y = 43
+
+        hero_x = 158 + self.hero_attack_dx + self.hero_shake_x
+        hero_y = 40
+
         # モンスター側
         if self.monster_defeated:
             self.draw_center_text(20, 42, 110, "モンスターを", 8, 10)
             self.draw_center_text(20, 55, 110, "たおした！！", 8, 10)
         else:
-            pyxel.blt(42, 34, 0, 48, 0, 48, 48, 0)
-            self.draw_text(45, 80, "モンスター", 8, 7)
+            pyxel.blt(
+                monster_x,
+                monster_y,
+                1,
+                0,
+                0,
+                self.sprite_size,
+                self.sprite_size,
+                0
+            )
+            self.draw_text(50, 80, "モンスター", 8, 7)
 
         # 勇者側
         if self.player_defeated:
             self.draw_center_text(170, 45, 90, "GAME OVER ..", 8, 8)
         else:
-            pyxel.blt(158, 30, 0, 0, 0, 48, 48, 0)
-            self.draw_text(165, 80, "ゆうしゃ", 8, 7)
+            pyxel.blt(
+                hero_x,
+                hero_y,
+                0,
+                0,
+                0,
+                self.sprite_size,
+                self.sprite_size,
+                0
+            )
+            self.draw_text(160, 80, "ゆうしゃ", 8, 7)
+
+        # 勇者攻撃中：スライム側に斜線エフェクト
+        if self.attack_animating:
+            frame = self.attack_total_frames - self.attack_timer
+
+            if frame in [5, 6, 7]:
+                pyxel.line(96, 46, 80, 64, 7)
+                pyxel.line(98, 46, 82, 64, 10)
+
+        # モンスター攻撃中：勇者側に斜線エフェクト
+        if self.monster_attack_animating:
+            frame = self.monster_attack_total_frames - self.monster_attack_timer
+
+            if frame in [5, 6, 7]:
+                pyxel.line(168, 46, 184, 62, 12)
+                pyxel.line(170, 46, 186, 62, 7)
 
     def draw_status(self):
         # 左：モンスターHP
@@ -272,7 +422,7 @@ class App:
         if not self.player_defeated:
             self.draw_text(178, 8, "HP", 8, 11)
             self.draw_hp_bar(188, 7, 60, 8, self.player_hp, self.player_max_hp, 11)
-    
+
     def draw_time_text(self):
         seconds_left = max(0, (self.time_left + self.fps - 1) // self.fps)
 

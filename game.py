@@ -17,9 +17,26 @@ class App:
         # hero.png と slime.png は 38×38 前提
         pyxel.images[0].load(0, 0, "hero.png")
         pyxel.images[1].load(0, 0, "slime.png")
+        pyxel.images[2].load(0, 0, "gorem.png")
 
         self.player_max_hp = 5
-        self.monster_max_hp = 5
+
+        # モンスター情報
+        self.monsters = [
+            {
+                "name": "スライム",
+                "image_bank": 1,
+                "max_hp": 5,
+            },
+            {
+                "name": "ゴーレム",
+                "image_bank": 2,
+                "max_hp": 8,
+            },
+        ]
+
+        self.current_monster_index = 0
+        self.monster_max_hp = self.monsters[self.current_monster_index]["max_hp"]
 
         self.player_hp = self.player_max_hp
         self.monster_hp = self.monster_max_hp
@@ -40,6 +57,7 @@ class App:
         # モンスター撃破状態
         self.monster_defeated = False
         self.defeat_timer = 0
+        self.defeated_monster_name = ""
 
         # プレイヤー敗北状態
         self.player_defeated = False
@@ -99,6 +117,16 @@ class App:
         self.op = op
         self.input_text = ""
         self.time_left = self.time_limit
+    
+    def next_monster(self):
+        self.current_monster_index += 1
+
+        # 最後まで行ったら最初に戻る
+        if self.current_monster_index >= len(self.monsters):
+            self.current_monster_index = 0
+
+        self.monster_max_hp = self.monsters[self.current_monster_index]["max_hp"]
+        self.monster_hp = self.monster_max_hp
 
     def update(self):
         # プレイヤー敗北中なら入力を止める
@@ -108,7 +136,11 @@ class App:
             if self.game_over_timer <= 0:
                 self.player_defeated = False
                 self.player_hp = self.player_max_hp
+
+                self.current_monster_index = 0
+                self.monster_max_hp = self.monsters[self.current_monster_index]["max_hp"]
                 self.monster_hp = self.monster_max_hp
+
                 self.score = 0
                 self.message = ""
                 self.input_text = ""
@@ -122,7 +154,7 @@ class App:
 
             if self.defeat_timer <= 0:
                 self.monster_defeated = False
-                self.monster_hp = self.monster_max_hp
+                self.next_monster()
                 self.message = ""
                 self.input_text = ""
                 self.make_question()
@@ -300,6 +332,8 @@ class App:
             self.score += 1
 
             if self.monster_hp <= 0:
+                current_monster = self.monsters[self.current_monster_index]
+                self.defeated_monster_name = current_monster["name"]
                 self.pending_monster_defeat = True
 
         self.attack_timer -= 1
@@ -355,27 +389,31 @@ class App:
 
     def draw_battle_area(self):
         monster_x = 50 + self.monster_shake_x + self.monster_attack_dx
-        monster_y = 43
+        monster_y = 42
 
         hero_x = 158 + self.hero_attack_dx + self.hero_shake_x
         hero_y = 40
 
         # モンスター側
         if self.monster_defeated:
-            self.draw_center_text(20, 42, 110, "モンスターを", 8, 10)
+            defeated_name = self.defeated_monster_name or "モンスター"
+            self.draw_center_text(20, 42, 110, defeated_name + "を", 8, 10)
             self.draw_center_text(20, 55, 110, "たおした！！", 8, 10)
         else:
+            current_monster = self.monsters[self.current_monster_index]
+
             pyxel.blt(
                 monster_x,
                 monster_y,
-                1,
+                current_monster["image_bank"],
                 0,
                 0,
                 self.sprite_size,
                 self.sprite_size,
                 0
             )
-            self.draw_text(50, 80, "モンスター", 8, 7)
+
+            self.draw_text(52, 80, current_monster["name"], 8, 7)
 
         # 勇者側
         if self.player_defeated:

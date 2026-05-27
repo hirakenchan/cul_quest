@@ -1,8 +1,8 @@
 from PIL import Image
 
 
-INPUT_FILE = "gorem_original.png"
-OUTPUT_FILE = "gorem.png"
+INPUT_FILE = "dragon_original.png"
+OUTPUT_FILE = "dragon.png"
 
 # 元画像を開く
 img = Image.open(INPUT_FILE).convert("RGBA")

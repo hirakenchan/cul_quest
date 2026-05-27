@@ -14,10 +14,14 @@ class App:
         self.sprite_size = 38
 
         # 画像読み込み
-        # hero.png と slime.png は 38×38 前提
+        # キャラクターは38×38 前提
         pyxel.images[0].load(0, 0, "hero.png")
         pyxel.images[1].load(0, 0, "slime.png")
-        pyxel.images[2].load(0, 0, "gorem.png")
+
+        # 画像バンク2に横並びで読み込み
+        pyxel.images[2].load(0, 0, "ghost.png")      # 38×38
+        pyxel.images[2].load(48, 0, "gorem.png")     # 44×44
+        pyxel.images[2].load(96, 0, "dragon.png")    # 56×56
 
         self.player_max_hp = 5
 
@@ -26,12 +30,54 @@ class App:
             {
                 "name": "スライム",
                 "image_bank": 1,
+                "image_x": 0,
+                "image_y": 0,
+                "image_w": 38,
+                "image_h": 38,
+                "draw_x": 50,
+                "draw_y": 42,
+                "name_x": 52,
+                "name_y": 80,
                 "max_hp": 5,
+            },
+            {
+                "name": "ゴースト",
+                "image_bank": 2,
+                "image_x": 0,
+                "image_y": 0,
+                "image_w": 38,
+                "image_h": 38,
+                "draw_x": 50,
+                "draw_y": 42,
+                "name_x": 52,
+                "name_y": 80,
+                "max_hp": 8,
             },
             {
                 "name": "ゴーレム",
                 "image_bank": 2,
-                "max_hp": 8,
+                "image_x": 48,
+                "image_y": 0,
+                "image_w": 44,
+                "image_h": 44,
+                "draw_x": 47,
+                "draw_y": 38,
+                "name_x": 52,
+                "name_y": 82,
+                "max_hp": 10,
+            },
+            {
+                "name": "ドラゴン",
+                "image_bank": 2,
+                "image_x": 96,
+                "image_y": 0,
+                "image_w": 56,
+                "image_h": 56,
+                "draw_x": 40,
+                "draw_y": 26,
+                "name_x": 52,
+                "name_y": 82,
+                "max_hp": 18,
             },
         ]
 
@@ -319,7 +365,7 @@ class App:
         else:
             self.hero_attack_dx = min(0, -9 + (frame - 7) * 3)
 
-        # スライムを少し揺らす
+        # モンスターを少し揺らす
         if frame in [5, 6, 7]:
             self.monster_shake_x = -2 if frame % 2 == 1 else 2
         else:
@@ -402,15 +448,26 @@ class App:
         else:
             current_monster = self.monsters[self.current_monster_index]
 
+            monster_x = current_monster["draw_x"] + self.monster_shake_x + self.monster_attack_dx
+            monster_y = current_monster["draw_y"]
+
             pyxel.blt(
                 monster_x,
                 monster_y,
                 current_monster["image_bank"],
-                0,
-                0,
-                self.sprite_size,
-                self.sprite_size,
+                current_monster["image_x"],
+                current_monster["image_y"],
+                current_monster["image_w"],
+                current_monster["image_h"],
                 0
+            )
+
+            self.draw_text(
+                current_monster["name_x"],
+                current_monster["name_y"],
+                current_monster["name"],
+                8,
+                7
             )
 
             self.draw_text(52, 80, current_monster["name"], 8, 7)
@@ -422,7 +479,7 @@ class App:
             pyxel.blt(
                 hero_x,
                 hero_y,
-                0,
+                0,  # 勇者は画像バンク0
                 0,
                 0,
                 self.sprite_size,
@@ -431,7 +488,7 @@ class App:
             )
             self.draw_text(160, 80, "ゆうしゃ", 8, 7)
 
-        # 勇者攻撃中：スライム側に斜線エフェクト
+        # 勇者攻撃中：モンスター側に斜線エフェクト
         if self.attack_animating:
             frame = self.attack_total_frames - self.attack_timer
 

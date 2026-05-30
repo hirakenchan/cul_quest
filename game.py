@@ -19,9 +19,9 @@ class App:
         pyxel.images[1].load(0, 0, "slime.png")
 
         # 画像バンク2に横並びで読み込み
-        pyxel.images[2].load(0, 0, "ghost.png")      # 38×38
-        pyxel.images[2].load(48, 0, "gorem.png")     # 44×44
-        pyxel.images[2].load(96, 0, "dragon.png")    # 56×56
+        pyxel.images[2].load(0, 0, "ghost.png")       # 38×38
+        pyxel.images[2].load(48, 0, "gorem.png")      # 46×46
+        pyxel.images[2].load(104, 0, "dragon.png")    # 72×72
 
         self.player_max_hp = 5
 
@@ -36,7 +36,8 @@ class App:
                 "image_h": 38,
                 "draw_x": 50,
                 "draw_y": 42,
-                "name_x": 52,
+                "name_box_x": 30,
+                "name_box_w": 80,
                 "name_y": 80,
                 "max_hp": 5,
             },
@@ -49,7 +50,8 @@ class App:
                 "image_h": 38,
                 "draw_x": 50,
                 "draw_y": 42,
-                "name_x": 52,
+                "name_box_x": 30,
+                "name_box_w": 80,
                 "name_y": 80,
                 "max_hp": 8,
             },
@@ -58,24 +60,22 @@ class App:
                 "image_bank": 2,
                 "image_x": 48,
                 "image_y": 0,
-                "image_w": 44,
-                "image_h": 44,
-                "draw_x": 47,
-                "draw_y": 38,
-                "name_x": 52,
+                "image_w": 46,
+                "image_h": 46,
+                "draw_x": 45,
+                "draw_y": 36,
                 "name_y": 82,
                 "max_hp": 10,
             },
             {
                 "name": "ドラゴン",
                 "image_bank": 2,
-                "image_x": 96,
+                "image_x": 104,
                 "image_y": 0,
-                "image_w": 56,
-                "image_h": 56,
-                "draw_x": 40,
-                "draw_y": 26,
-                "name_x": 52,
+                "image_w": 72,
+                "image_h": 72,
+                "draw_x": 22,
+                "draw_y": 12,
                 "name_y": 82,
                 "max_hp": 18,
             },
@@ -90,6 +90,41 @@ class App:
         self.message = ""
         self.message_color = 7
         self.input_text = ""
+
+        # 画面状態
+        self.scene = "title"
+        self.selected_level_index = 0
+        self.current_level = None
+
+        # レベル情報
+        self.levels = [
+            {
+                "name": "1. 1けた たしざん・ひきざん",
+                "type": "one_digit_add_sub",
+                "monster_index": 0,
+            },
+            {
+                "name": "2. 2けた たしざん・ひきざん",
+                "type": "two_digit_add_sub",
+                "monster_index": 1,
+            },
+            {
+                "name": "3. 1けた かけざん",
+                "type": "one_digit_multiply",
+                "monster_index": 2,
+            },
+            {
+                "name": "4. かんたん わりざん",
+                "type": "simple_divide",
+                "monster_index": 3,
+            },
+        ]
+        
+        # 問題数選択
+        self.question_count_options = [5, 10, 20]
+        self.selected_question_count_index = 1  # 最初は10問
+        self.target_question_count = 10
+        self.correct_count = 0
 
         # 制限時間
         self.time_limit_sec = 20
@@ -137,28 +172,52 @@ class App:
             ("C", 24, 176), ("0", 104, 176), ("OK", 184, 176),
         ]
 
-        self.make_question()
         pyxel.run(self.update, self.draw)
 
     def make_question(self):
-        op = random.choice(["+", "-", "x"])
+        # まだレベルが選ばれていない場合は何もしない
+        if self.current_level is None:
+            return
 
-        if op == "+":
-            self.a = random.randint(1, 20)
-            self.b = random.randint(1, 20)
-            self.answer = self.a + self.b
+        level_type = self.current_level["type"]
 
-        elif op == "-":
-            self.a = random.randint(1, 20)
-            self.b = random.randint(1, 20)
-            if self.a < self.b:
-                self.a, self.b = self.b, self.a
-            self.answer = self.a - self.b
+        if level_type == "one_digit_add_sub":
+            op = random.choice(["+", "-"])
+            self.a = random.randint(1, 9)
+            self.b = random.randint(1, 9)
 
-        else:
+            if op == "+":
+                self.answer = self.a + self.b
+            else:
+                if self.a < self.b:
+                    self.a, self.b = self.b, self.a
+                self.answer = self.a - self.b
+
+        elif level_type == "two_digit_add_sub":
+            op = random.choice(["+", "-"])
+            self.a = random.randint(10, 49)
+            self.b = random.randint(10, 49)
+
+            if op == "+":
+                self.answer = self.a + self.b
+            else:
+                if self.a < self.b:
+                    self.a, self.b = self.b, self.a
+                self.answer = self.a - self.b
+
+        elif level_type == "one_digit_multiply":
+            op = "x"
             self.a = random.randint(1, 9)
             self.b = random.randint(1, 9)
             self.answer = self.a * self.b
+
+        elif level_type == "simple_divide":
+            op = "÷"
+
+            # 割り切れる問題だけ作る
+            self.b = random.randint(2, 9)
+            self.answer = random.randint(2, 9)
+            self.a = self.b * self.answer
 
         self.op = op
         self.input_text = ""
@@ -174,7 +233,7 @@ class App:
         self.monster_max_hp = self.monsters[self.current_monster_index]["max_hp"]
         self.monster_hp = self.monster_max_hp
 
-    def update(self):
+    def update_battle(self):
         # プレイヤー敗北中なら入力を止める
         if self.player_defeated:
             self.game_over_timer -= 1
@@ -200,10 +259,9 @@ class App:
 
             if self.defeat_timer <= 0:
                 self.monster_defeated = False
-                self.next_monster()
                 self.message = ""
                 self.input_text = ""
-                self.make_question()
+                self.scene = "clear"
 
             return
 
@@ -263,6 +321,116 @@ class App:
             for label, x, y in self.buttons:
                 if x <= mx <= x + self.button_w and y <= my <= y + self.button_h:
                     self.press_button(label)
+    
+    def update_clear(self):
+        if pyxel.btnp(pyxel.KEY_RETURN) or pyxel.btnp(pyxel.KEY_SPACE):
+            self.message = ""
+            self.input_text = ""
+            self.scene = "title"
+    
+    def update(self):
+        if self.scene == "title":
+            self.update_title()
+        elif self.scene == "count_select":
+            self.update_count_select()
+        elif self.scene == "battle":
+            self.update_battle()
+        elif self.scene == "clear":
+            self.update_clear()
+    
+    def update_title(self):
+        # 上キー
+        if pyxel.btnp(pyxel.KEY_UP):
+            self.selected_level_index -= 1
+            if self.selected_level_index < 0:
+                self.selected_level_index = len(self.levels) - 1
+
+        # 下キー
+        if pyxel.btnp(pyxel.KEY_DOWN):
+            self.selected_level_index += 1
+            if self.selected_level_index >= len(self.levels):
+                self.selected_level_index = 0
+
+        # 数字キーで直接選択
+        for i in range(len(self.levels)):
+            key = getattr(pyxel, f"KEY_{i + 1}")
+            if pyxel.btnp(key):
+                self.select_level(i)
+
+        # Enterで決定
+        if pyxel.btnp(pyxel.KEY_RETURN):
+            self.select_level(self.selected_level_index)
+    
+    def update_count_select(self):
+        # 上・左キーで問題数を減らす
+        if pyxel.btnp(pyxel.KEY_UP) or pyxel.btnp(pyxel.KEY_LEFT):
+            self.selected_question_count_index -= 1
+            if self.selected_question_count_index < 0:
+                self.selected_question_count_index = len(self.question_count_options) - 1
+
+        # 下・右キーで問題数を増やす
+        if pyxel.btnp(pyxel.KEY_DOWN) or pyxel.btnp(pyxel.KEY_RIGHT):
+            self.selected_question_count_index += 1
+            if self.selected_question_count_index >= len(self.question_count_options):
+                self.selected_question_count_index = 0
+
+        # 数字キーで直接選択
+        for i in range(len(self.question_count_options)):
+            key = getattr(pyxel, f"KEY_{i + 1}")
+            if pyxel.btnp(key):
+                self.selected_question_count_index = i
+                self.start_level()
+
+        # Enterで決定
+        if pyxel.btnp(pyxel.KEY_RETURN):
+            self.start_level()
+
+        # Escでタイトルに戻る
+        if pyxel.btnp(pyxel.KEY_ESCAPE):
+            self.scene = "title"
+
+    def select_level(self, level_index):
+        self.selected_level_index = level_index
+        self.current_level = self.levels[level_index]
+
+        # 問題数選択は毎回10問から始める
+        self.selected_question_count_index = 1
+
+        self.scene = "count_select"
+    
+    def start_level(self):
+        if self.current_level is None:
+            return
+
+        # 選んだ問題数
+        self.target_question_count = self.question_count_options[
+            self.selected_question_count_index
+        ]
+
+        # レベルに対応したモンスターをセット
+        self.current_monster_index = self.current_level["monster_index"]
+
+        # 今回は「問題数 = モンスターHP」にする
+        self.monster_max_hp = self.target_question_count
+
+        # 状態をリセット
+        self.player_hp = self.player_max_hp
+        self.monster_hp = self.monster_max_hp
+        self.score = 0
+        self.correct_count = 0
+        self.message = ""
+        self.message_color = 7
+        self.input_text = ""
+
+        self.monster_defeated = False
+        self.player_defeated = False
+        self.attack_animating = False
+        self.monster_attack_animating = False
+        self.time_up_waiting = False
+
+        # 問題を作ってバトル開始
+        self.make_question()
+        self.scene = "battle"
 
     def press_button(self, label):
         if label == "C":
@@ -376,6 +544,7 @@ class App:
             self.attack_hit_done = True
             self.monster_hp -= 1
             self.score += 1
+            self.correct_count += 1
 
             if self.monster_hp <= 0:
                 current_monster = self.monsters[self.current_monster_index]
@@ -411,8 +580,20 @@ class App:
         # 1秒待機
         self.time_up_waiting = True
         self.time_up_timer = self.fps
-
+    
     def draw(self):
+        pyxel.cls(0)
+
+        if self.scene == "title":
+            self.draw_title()
+        elif self.scene == "count_select":
+            self.draw_count_select()
+        elif self.scene == "battle":
+            self.draw_battle()
+        elif self.scene == "clear":
+            self.draw_clear()
+
+    def draw_battle(self):
         pyxel.cls(0)
 
         self.draw_status()
@@ -424,6 +605,29 @@ class App:
         pyxel.line(0, 108, 256, 108, 7)
 
         self.draw_keypad()
+    
+    def draw_title(self):
+        # タイトル
+        self.draw_center_text(0, 24, 256, "けいさんクエスト", 20, 7)
+
+        # 説明
+        self.draw_center_text(0, 48, 256, "レベルをえらんでね", 8, 10)
+
+        # レベル一覧
+        start_y = 72
+
+        for i, level in enumerate(self.levels):
+            y = start_y + i * 18
+
+            if i == self.selected_level_index:
+                # 選択中の行
+                pyxel.rect(24, y - 2, 208, 14, 1)
+                pyxel.rectb(24, y - 2, 208, 14, 7)
+                self.draw_text(34, y, "▶ " + level["name"], 8, 10)
+            else:
+                self.draw_text(42, y, level["name"], 8, 7)
+
+        self.draw_center_text(0, 160, 256, "↑↓でえらぶ / Enterでけってい", 8, 7)
 
     def draw_text(self, x, y, text, size=8, color=7):
         writer.draw(x, y, text, size, color)
@@ -432,6 +636,45 @@ class App:
         text_width = len(text) * size
         draw_x = x + (w - text_width) // 2
         writer.draw(draw_x, y, text, size, color)
+    
+    def draw_count_select(self):
+        self.draw_center_text(0, 24, 256, "もんだいすうをえらんでね", 8, 10)
+
+        if self.current_level is not None:
+            self.draw_center_text(0, 48, 256, self.current_level["name"], 8, 7)
+
+        start_y = 76
+
+        for i, count in enumerate(self.question_count_options):
+            y = start_y + i * 20
+            text = f"{i + 1}. {count}もん"
+
+            if i == self.selected_question_count_index:
+                pyxel.rect(70, y - 2, 116, 14, 1)
+                pyxel.rectb(70, y - 2, 116, 14, 7)
+                self.draw_text(84, y, "▶ " + text, 8, 10)
+            else:
+                self.draw_text(100, y, text, 8, 7)
+
+        self.draw_center_text(0, 156, 256, "↑↓でえらぶ / Enterでけってい", 8, 7)
+        self.draw_center_text(0, 170, 256, "Escでタイトルにもどる", 8, 7)
+    
+    def draw_clear(self):
+        self.draw_center_text(0, 36, 256, "ステージクリア！", 12, 10)
+
+        if self.current_level is not None:
+            self.draw_center_text(0, 68, 256, self.current_level["name"], 8, 7)
+
+        self.draw_center_text(
+            0,
+            94,
+            256,
+            f"{self.target_question_count}もん せいかい！",
+            8,
+            7
+        )
+
+        self.draw_center_text(0, 148, 256, "Enterでタイトルへ", 8, 10)
 
     def draw_battle_area(self):
         monster_x = 50 + self.monster_shake_x + self.monster_attack_dx
@@ -462,15 +705,19 @@ class App:
                 0
             )
 
+            # 画像幅に合わせて名前を中央寄せ
+            name_text_w = len(current_monster["name"]) * 8
+            name_x = current_monster["draw_x"] + (
+                current_monster["image_w"] - name_text_w
+            ) // 2
+
             self.draw_text(
-                current_monster["name_x"],
+                name_x,
                 current_monster["name_y"],
                 current_monster["name"],
                 8,
                 7
             )
-
-            self.draw_text(52, 80, current_monster["name"], 8, 7)
 
         # 勇者側
         if self.player_defeated:
@@ -511,7 +758,14 @@ class App:
             self.draw_hp_bar(28, 7, 60, 8, self.monster_hp, self.monster_max_hp, 8)
 
         # 中央：スコア
-        self.draw_center_text(100, 8, 56, f"{self.score}ポイント", 8, 7)
+        self.draw_center_text(
+            92,
+            8,
+            72,
+            f"{self.correct_count}/{self.target_question_count}もん",
+            8,
+            7
+        )
 
         # 右：勇者HP
         if not self.player_defeated:

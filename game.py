@@ -122,6 +122,14 @@ class App:
             },
         ]
 
+        # トップ画面のボタン範囲
+        self.ranking_button = {
+            "x": 78,
+            "y": 166,
+            "w": 100,
+            "h": 16,
+        }
+
         # 問題数選択
         self.question_count_options = [5, 10, 20]
         self.selected_question_count_index = 1  # 最初は10問
@@ -136,6 +144,15 @@ class App:
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
         self.ranking_file = os.path.join(self.base_dir, "ranking.json")
         self.ranking_records = self.load_ranking()
+
+
+        # ランキング設定
+        self.max_ranking_count = 5
+        self.pending_record = None
+
+        # 名前入力
+        self.player_name = ""
+        self.max_name_length = 8
 
         # クリア結果用
         self.clear_time_sec = 0
@@ -301,8 +318,26 @@ class App:
     
     def finish_stage(self):
         self.clear_time_sec = self.elapsed_frames // self.fps
-        self.is_new_best = self.save_best_record()
-        self.scene = "clear"
+
+        new_record = {
+            "name": "",
+            "level_name": self.current_level["name"],
+            "level_type": self.current_level["type"],
+            "question_count": self.target_question_count,
+            "clear_time_sec": self.clear_time_sec,
+            "miss_count": self.miss_count,
+        }
+
+        self.pending_record = new_record
+
+        # ランキングに入るなら名前入力へ
+        if self.can_enter_ranking(new_record):
+            self.player_name = ""
+            self.scene = "name_input"
+        else:
+            # 入らないならそのままランキング表示
+            self.pending_record = None
+            self.scene = "ranking"
     
     def next_monster(self):
         self.current_monster_index += 1
@@ -421,6 +456,10 @@ class App:
             self.update_battle()
         elif self.scene == "clear":
             self.update_clear()
+        elif self.scene == "name_input":
+            self.update_name_input()
+        elif self.scene == "ranking":
+            self.update_ranking()
     
     def update_title(self):
         if pyxel.btnp(pyxel.KEY_UP):
@@ -440,6 +479,15 @@ class App:
 
         if pyxel.btnp(pyxel.KEY_RETURN):
             self.select_level(self.selected_level_index)
+
+        # ランキングボタンをクリック
+        if self.is_clicked(
+            self.ranking_button["x"],
+            self.ranking_button["y"],
+            self.ranking_button["w"],
+            self.ranking_button["h"]
+        ):
+            self.scene = "ranking"
     
     def update_count_select(self):
         if pyxel.btnp(pyxel.KEY_UP) or pyxel.btnp(pyxel.KEY_LEFT):
@@ -462,6 +510,35 @@ class App:
             self.start_level()
 
         if pyxel.btnp(pyxel.KEY_ESCAPE):
+            self.scene = "title"
+
+    def update_name_input(self):
+        # A〜Z
+        for ch in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+            key = getattr(pyxel, f"KEY_{ch}")
+            if pyxel.btnp(key):
+                if len(self.player_name) < self.max_name_length:
+                    self.player_name += ch
+
+        # 0〜9
+        for i in range(10):
+            if pyxel.btnp(getattr(pyxel, f"KEY_{i}")):
+                if len(self.player_name) < self.max_name_length:
+                    self.player_name += str(i)
+
+        # 1文字消す
+        if pyxel.btnp(pyxel.KEY_BACKSPACE):
+            self.player_name = self.player_name[:-1]
+
+        # 決定
+        if pyxel.btnp(pyxel.KEY_RETURN):
+            self.save_pending_record()
+            self.scene = "ranking"
+
+    def update_ranking(self):
+        if pyxel.btnp(pyxel.KEY_RETURN) or pyxel.btnp(pyxel.KEY_ESCAPE):
+            self.message = ""
+            self.input_text = ""
             self.scene = "title"
 
     def select_level(self, level_index):
@@ -674,6 +751,10 @@ class App:
             self.draw_battle()
         elif self.scene == "clear":
             self.draw_clear()
+        elif self.scene == "name_input":
+            self.draw_name_input()
+        elif self.scene == "ranking":
+            self.draw_ranking()
 
     def draw_battle(self):
         pyxel.cls(0)
@@ -709,10 +790,94 @@ class App:
             else:
                 self.draw_text(42, y, level["name"], 8, 7)
 
-        self.draw_center_text(0, 160, 256, "↑↓でえらぶ / Enterでけってい", 8, 7)
+        self.draw_center_text(0, 150, 256, "↑↓でえらぶ / Enterでけってい", 8, 7)
+
+        # ランキングボタン
+        x = self.ranking_button["x"]
+        y = self.ranking_button["y"]
+        w = self.ranking_button["w"]
+        h = self.ranking_button["h"]
+
+        pyxel.rect(x, y, w, h, 1)
+        pyxel.rectb(x, y, w, h, 7)
+        self.draw_center_text(x, y + 4, w, "ランキング", 8, 10)
 
     def draw_text(self, x, y, text, size=8, color=7):
         writer.draw(x, y, text, size, color)
+
+    def draw_name_input(self):
+        self.draw_center_text(0, 24, 256, "きろくこうしん！", 12, 8)
+        self.draw_center_text(0, 52, 256, "なまえをいれてね", 8, 10)
+
+        # 結果
+        self.draw_center_text(
+            0,
+            76,
+            256,
+            f"じかん：{self.clear_time_sec}びょう / ミス：{self.miss_count}かい",
+            8,
+            7
+        )
+
+        # 名前入力欄
+        pyxel.rect(58, 104, 140, 18, 1)
+        pyxel.rectb(58, 104, 140, 18, 7)
+
+        display_name = self.player_name
+
+        # カーソル点滅
+        if pyxel.frame_count % 30 < 15:
+            display_name += "_"
+
+        self.draw_center_text(58, 109, 140, display_name, 8, 10)
+
+        self.draw_center_text(0, 144, 256, "A-Z / 0-9 でにゅうりょく", 8, 7)
+        self.draw_center_text(0, 160, 256, "Enterでけってい", 8, 7)
+
+    def draw_ranking(self):
+        self.draw_center_text(0, 12, 256, "ランキング", 12, 10)
+
+        # 表示対象のレベルと問題数
+        if self.current_level is not None:
+            level = self.current_level
+            count = self.target_question_count
+        else:
+            level = self.levels[self.selected_level_index]
+            count = self.question_count_options[self.selected_question_count_index]
+
+        ranking_key = self.build_ranking_key(level["type"], count)
+        records = self.get_records_for_key(ranking_key)
+
+        self.draw_center_text(0, 34, 256, level["name"], 8, 7)
+        self.draw_center_text(0, 48, 256, f"{count}もん", 8, 7)
+
+        start_y = 68
+
+        if len(records) == 0:
+            self.draw_center_text(0, 96, 256, "まだきろくがありません", 8, 7)
+        else:
+            for i, record in enumerate(records[:self.max_ranking_count]):
+                y = start_y + i * 18
+
+                name = record.get("name", "NO NAME")
+                time = record["clear_time_sec"]
+                miss = record["miss_count"]
+
+                text = f"{i + 1}. {name} {time}びょう ミス{miss}"
+
+                color = 10 if i == 0 else 7
+                self.draw_text(24, y, text, 8, color)
+
+        self.draw_center_text(0, 170, 256, "Enter / Escでタイトルへ", 8, 7)
+
+    def is_clicked(self, x, y, w, h):
+        if pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT):
+            mx = pyxel.mouse_x
+            my = pyxel.mouse_y
+
+            return x <= mx <= x + w and y <= my <= y + h
+
+        return False
 
     def draw_center_text(self, x, y, w, text, size=8, color=7):
         text_width = len(text) * size
@@ -931,6 +1096,84 @@ class App:
                 self.draw_center_text(x, y + 4, self.button_w, label, 8, 7)
             else:
                 pyxel.text(x + 21, y + 5, label, 7)
+
+    def build_ranking_key(self, level_type, question_count):
+        return f"{level_type}_{question_count}"
+
+
+    def get_ranking_key(self):
+        return self.build_ranking_key(
+            self.current_level["type"],
+            self.target_question_count
+        )
+    
+    def get_records_for_key(self, ranking_key):
+        records = self.ranking_records.get(ranking_key, [])
+
+        # 以前の1件保存形式だった場合の保険
+        if isinstance(records, dict):
+            records = [records]
+
+        return records
+    
+    def can_enter_ranking(self, new_record):
+        ranking_key = self.get_ranking_key()
+        records = self.get_records_for_key(ranking_key)
+
+        # 5件未満なら必ず入る
+        if len(records) < self.max_ranking_count:
+            return True
+
+        # 時間が短い順、同じならミスが少ない順
+        records = sorted(
+            records,
+            key=lambda r: (r["clear_time_sec"], r["miss_count"])
+        )
+
+        worst_record = records[-1]
+
+        new_score = (
+            new_record["clear_time_sec"],
+            new_record["miss_count"]
+        )
+
+        worst_score = (
+            worst_record["clear_time_sec"],
+            worst_record["miss_count"]
+        )
+
+        return new_score < worst_score
+    
+    def save_pending_record(self):
+        if self.pending_record is None:
+            return
+
+        ranking_key = self.get_ranking_key()
+        records = self.get_records_for_key(ranking_key)
+
+        name = self.player_name.strip()
+        if name == "":
+            name = "NO NAME"
+
+        new_record = self.pending_record.copy()
+        new_record["name"] = name
+
+        records.append(new_record)
+
+        # 時間が短い順、同じならミスが少ない順
+        records = sorted(
+            records,
+            key=lambda r: (r["clear_time_sec"], r["miss_count"])
+        )
+
+        # 上位5件だけ残す
+        records = records[:self.max_ranking_count]
+
+        self.ranking_records[ranking_key] = records
+        self.save_ranking()
+
+        self.pending_record = None
+        self.player_name = ""
 
 
 App()

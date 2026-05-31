@@ -1,5 +1,7 @@
 import pyxel
 import random
+import json
+import os
 import PyxelUniversalFont as puf
 
 writer = puf.Writer("misaki_gothic.ttf")
@@ -119,6 +121,25 @@ class App:
                 "monster_index": 3,
             },
         ]
+
+        # 問題数選択
+        self.question_count_options = [5, 10, 20]
+        self.selected_question_count_index = 1  # 最初は10問
+        self.target_question_count = 10
+        self.correct_count = 0
+
+        # 結果表示用
+        self.miss_count = 0
+        self.elapsed_frames = 0
+
+        # ランキング保存
+        self.base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.ranking_file = os.path.join(self.base_dir, "ranking.json")
+        self.ranking_records = self.load_ranking()
+
+        # クリア結果用
+        self.clear_time_sec = 0
+        self.is_new_best = False
         
         # 問題数選択
         self.question_count_options = [5, 10, 20]
@@ -222,6 +243,66 @@ class App:
         self.op = op
         self.input_text = ""
         self.time_left = self.time_limit
+
+    def load_ranking(self):
+        if not os.path.exists(self.ranking_file):
+            return {}
+
+        try:
+            with open(self.ranking_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            return {}
+        
+    def save_ranking(self):
+        with open(self.ranking_file, "w", encoding="utf-8") as f:
+            json.dump(self.ranking_records, f, ensure_ascii=False, indent=2)
+
+    def get_ranking_key(self):
+        level_type = self.current_level["type"]
+        return f"{level_type}_{self.target_question_count}"
+    
+    def save_best_record(self):
+        ranking_key = self.get_ranking_key()
+
+        new_record = {
+            "level_name": self.current_level["name"],
+            "level_type": self.current_level["type"],
+            "question_count": self.target_question_count,
+            "clear_time_sec": self.clear_time_sec,
+            "miss_count": self.miss_count,
+        }
+
+        old_record = self.ranking_records.get(ranking_key)
+
+        # まだ記録がない場合は保存
+        if old_record is None:
+            self.ranking_records[ranking_key] = new_record
+            self.save_ranking()
+            return True
+
+        old_score = (
+            old_record["clear_time_sec"],
+            old_record["miss_count"],
+        )
+
+        new_score = (
+            new_record["clear_time_sec"],
+            new_record["miss_count"],
+        )
+
+        # 時間が短い、または同じ時間でミスが少なければ更新
+        if new_score < old_score:
+            self.ranking_records[ranking_key] = new_record
+            self.save_ranking()
+            return True
+
+        return False
+    
+    def finish_stage(self):
+        self.clear_time_sec = self.elapsed_frames // self.fps
+        self.is_new_best = self.save_best_record()
+        self.scene = "clear"
     
     def next_monster(self):
         self.current_monster_index += 1
@@ -261,7 +342,7 @@ class App:
                 self.monster_defeated = False
                 self.message = ""
                 self.input_text = ""
-                self.scene = "clear"
+                self.finish_stage()
 
             return
 
@@ -293,6 +374,9 @@ class App:
                 self.make_question()
 
             return
+        
+        # プレイ時間をカウント
+        self.elapsed_frames += 1
 
         # 制限時間を減らす
         self.time_left -= 1
@@ -339,59 +423,55 @@ class App:
             self.update_clear()
     
     def update_title(self):
-        # 上キー
         if pyxel.btnp(pyxel.KEY_UP):
             self.selected_level_index -= 1
             if self.selected_level_index < 0:
                 self.selected_level_index = len(self.levels) - 1
 
-        # 下キー
         if pyxel.btnp(pyxel.KEY_DOWN):
             self.selected_level_index += 1
             if self.selected_level_index >= len(self.levels):
                 self.selected_level_index = 0
 
-        # 数字キーで直接選択
         for i in range(len(self.levels)):
             key = getattr(pyxel, f"KEY_{i + 1}")
             if pyxel.btnp(key):
                 self.select_level(i)
 
-        # Enterで決定
         if pyxel.btnp(pyxel.KEY_RETURN):
             self.select_level(self.selected_level_index)
     
     def update_count_select(self):
-        # 上・左キーで問題数を減らす
         if pyxel.btnp(pyxel.KEY_UP) or pyxel.btnp(pyxel.KEY_LEFT):
             self.selected_question_count_index -= 1
             if self.selected_question_count_index < 0:
                 self.selected_question_count_index = len(self.question_count_options) - 1
 
-        # 下・右キーで問題数を増やす
         if pyxel.btnp(pyxel.KEY_DOWN) or pyxel.btnp(pyxel.KEY_RIGHT):
             self.selected_question_count_index += 1
             if self.selected_question_count_index >= len(self.question_count_options):
                 self.selected_question_count_index = 0
 
-        # 数字キーで直接選択
         for i in range(len(self.question_count_options)):
             key = getattr(pyxel, f"KEY_{i + 1}")
             if pyxel.btnp(key):
                 self.selected_question_count_index = i
                 self.start_level()
 
-        # Enterで決定
         if pyxel.btnp(pyxel.KEY_RETURN):
             self.start_level()
 
-        # Escでタイトルに戻る
         if pyxel.btnp(pyxel.KEY_ESCAPE):
             self.scene = "title"
 
     def select_level(self, level_index):
         self.selected_level_index = level_index
         self.current_level = self.levels[level_index]
+
+        # 問題数選択は毎回10問から開始
+        self.selected_question_count_index = 1
+
+        self.scene = "count_select"
 
         # 問題数選択は毎回10問から始める
         self.selected_question_count_index = 1
@@ -410,7 +490,7 @@ class App:
         # レベルに対応したモンスターをセット
         self.current_monster_index = self.current_level["monster_index"]
 
-        # 今回は「問題数 = モンスターHP」にする
+        # 問題数 = モンスターHP
         self.monster_max_hp = self.target_question_count
 
         # 状態をリセット
@@ -418,6 +498,9 @@ class App:
         self.monster_hp = self.monster_max_hp
         self.score = 0
         self.correct_count = 0
+        self.miss_count = 0
+        self.elapsed_frames = 0
+
         self.message = ""
         self.message_color = 7
         self.input_text = ""
@@ -428,7 +511,6 @@ class App:
         self.monster_attack_animating = False
         self.time_up_waiting = False
 
-        # 問題を作ってバトル開始
         self.make_question()
         self.scene = "battle"
 
@@ -660,21 +742,54 @@ class App:
         self.draw_center_text(0, 170, 256, "Escでタイトルにもどる", 8, 7)
     
     def draw_clear(self):
-        self.draw_center_text(0, 36, 256, "ステージクリア！", 12, 10)
+        self.draw_center_text(0, 24, 256, "ステージクリア！", 12, 10)
 
         if self.current_level is not None:
-            self.draw_center_text(0, 68, 256, self.current_level["name"], 8, 7)
+            self.draw_center_text(0, 54, 256, self.current_level["name"], 8, 7)
 
         self.draw_center_text(
             0,
-            94,
+            78,
             256,
-            f"{self.target_question_count}もん せいかい！",
+            f"{self.target_question_count}もん クリア",
             8,
             7
         )
 
-        self.draw_center_text(0, 148, 256, "Enterでタイトルへ", 8, 10)
+        self.draw_center_text(
+            0,
+            96,
+            256,
+            f"じかん：{self.clear_time_sec}びょう",
+            8,
+            10
+        )
+
+        self.draw_center_text(
+            0,
+            114,
+            256,
+            f"ミス：{self.miss_count}かい",
+            8,
+            12
+        )
+
+        if self.is_new_best:
+            self.draw_center_text(0, 136, 256, "きろくこうしん！", 8, 8)
+        else:
+            best = self.ranking_records.get(self.get_ranking_key())
+
+            if best is not None:
+                self.draw_center_text(
+                    0,
+                    136,
+                    256,
+                    f"ベスト：{best['clear_time_sec']}びょう / ミス{best['miss_count']}かい",
+                    8,
+                    7
+                )
+
+        self.draw_center_text(0, 164, 256, "Enterでタイトルへ", 8, 7)
 
     def draw_battle_area(self):
         monster_x = 50 + self.monster_shake_x + self.monster_attack_dx

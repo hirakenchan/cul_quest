@@ -16,9 +16,65 @@
       "miss_count": 0
     },
     {
+      "name": "AAA",
+      "level_name": "1. 1けた たしざん・ひきざん",
+      "level_type": "one_digit_add_sub",
+      "question_count": 5,
+      "clear_time_sec": 7,
+      "miss_count": 0
+    },
+    {
+      "name": "NO NAME",
+      "level_name": "1. 1けた たしざん・ひきざん",
+      "level_type": "one_digit_add_sub",
+      "question_count": 5,
+      "clear_time_sec": 7,
+      "miss_count": 0
+    },
+    {
       "name": "KENTA",
       "level_name": "1. 1けた たしざん・ひきざん",
       "level_type": "one_digit_add_sub",
+      "question_count": 5,
+      "clear_time_sec": 8,
+      "miss_count": 0
+    }
+  ],
+  "one_digit_add_sub_10": [
+    {
+      "name": "かれん",
+      "level_name": "1. 1けた たしざん・ひきざん",
+      "level_type": "one_digit_add_sub",
+      "question_count": 10,
+      "clear_time_sec": 24,
+      "miss_count": 0
+    }
+  ],
+  "one_digit_multiply_5": [
+    {
+      "name": "かれん",
+      "level_name": "3. 1けた かけざん",
+      "level_type": "one_digit_multiply",
+      "question_count": 5,
+      "clear_time_sec": 10,
+      "miss_count": 0
+    }
+  ],
+  "two_digit_add_sub_5": [
+    {
+      "name": "NO NAME",
+      "level_name": "2. 2けた たしざん・ひきざん",
+      "level_type": "two_digit_add_sub",
+      "question_count": 5,
+      "clear_time_sec": 19,
+      "miss_count": 0
+    }
+  ],
+  "simple_divide_5": [
+    {
+      "name": "あ123",
+      "level_name": "4. かんたん わりざん",
+      "level_type": "simple_divide",
       "question_count": 5,
       "clear_time_sec": 13,
       "miss_count": 0

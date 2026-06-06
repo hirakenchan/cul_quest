@@ -11,6 +11,7 @@ class App:
     def __init__(self):
         self.fps = 30
         pyxel.init(256, 192, title="Math Quest", fps=self.fps)
+        pyxel.mouse(True)  # PCテスト用
 
         # 画像サイズ
         self.sprite_size = 38
@@ -210,7 +211,135 @@ class App:
             ("C", 24, 176), ("0", 104, 176), ("OK", 184, 176),
         ]
 
+        self.ranking_button = {
+            "x": 78,
+            "y": 166,
+            "w": 100,
+            "h": 16,
+        }
+
+        # 名前入力
+        self.player_name = ""
+        self.max_name_length = 5
+        self.name_input_mode = "kana"  # kana / num
+
+        # 連続タップ入力用
+        self.active_kana_label = None
+        self.active_kana_index = 0
+        self.kana_cycle_timer = 0
+        self.kana_cycle_limit = 30  # 30FPSなら約1秒
+
+        # あかさたなキー
+        self.kana_groups = [
+            {"label": "あ", "chars": ["あ", "い", "う", "え", "お"]},
+            {"label": "か", "chars": ["か", "き", "く", "け", "こ"]},
+            {"label": "さ", "chars": ["さ", "し", "す", "せ", "そ"]},
+            {"label": "た", "chars": ["た", "ち", "つ", "て", "と"]},
+            {"label": "な", "chars": ["な", "に", "ぬ", "ね", "の"]},
+            {"label": "は", "chars": ["は", "ひ", "ふ", "へ", "ほ"]},
+            {"label": "ま", "chars": ["ま", "み", "む", "め", "も"]},
+            {"label": "や", "chars": ["や", "ゆ", "よ", "ゃ", "ゅ", "ょ"]},
+            {"label": "ら", "chars": ["ら", "り", "る", "れ", "ろ"]},
+            {"label": "わ", "chars": ["わ", "を", "ん", "っ", "ー"]},
+        ]
+
+        # 濁点・半濁点変換
+        self.dakuten_map = {
+            "か": "が", "き": "ぎ", "く": "ぐ", "け": "げ", "こ": "ご",
+            "さ": "ざ", "し": "じ", "す": "ず", "せ": "ぜ", "そ": "ぞ",
+            "た": "だ", "ち": "ぢ", "つ": "づ", "て": "で", "と": "ど",
+            "は": "ば", "ひ": "び", "ふ": "ぶ", "へ": "べ", "ほ": "ぼ",
+        }
+
+        self.handakuten_map = {
+            "は": "ぱ", "ひ": "ぴ", "ふ": "ぷ", "へ": "ぺ", "ほ": "ぽ",
+        }
+
         pyxel.run(self.update, self.draw)
+    
+    def get_name_input_buttons(self):
+        buttons = []
+
+        button_w = 54
+        button_h = 16
+        cols = [28, 101, 174]
+        start_y = 88
+        row_gap = 20
+
+        if self.name_input_mode == "kana":
+            rows = [
+                ["あ", "か", "さ"],
+                ["た", "な", "は"],
+                ["ま", "や", "ら"],
+                ["わ", "゛", "゜"],
+                ["すうじ", "けす", "OK"],
+            ]
+
+            for row_index, row in enumerate(rows):
+                y = start_y + row_index * row_gap
+
+                for col_index, label in enumerate(row):
+                    x = cols[col_index]
+
+                    if label == "すうじ":
+                        button_type = "toggle_num"
+                    elif label == "けす":
+                        button_type = "delete"
+                    elif label == "OK":
+                        button_type = "ok"
+                    elif label == "゛":
+                        button_type = "dakuten"
+                    elif label == "゜":
+                        button_type = "handakuten"
+                    else:
+                        button_type = "kana_group"
+
+                    buttons.append({
+                        "label": label,
+                        "type": button_type,
+                        "x": x,
+                        "y": y,
+                        "w": button_w,
+                        "h": button_h,
+                    })
+
+        elif self.name_input_mode == "num":
+            rows = [
+                ["1", "2", "3"],
+                ["4", "5", "6"],
+                ["7", "8", "9"],
+                ["かな", "0", "けす"],
+                ["", "", "OK"],
+            ]
+
+            for row_index, row in enumerate(rows):
+                y = start_y + row_index * row_gap
+
+                for col_index, label in enumerate(row):
+                    if label == "":
+                        continue
+
+                    x = cols[col_index]
+
+                    if label == "かな":
+                        button_type = "toggle_kana"
+                    elif label == "けす":
+                        button_type = "delete"
+                    elif label == "OK":
+                        button_type = "ok"
+                    else:
+                        button_type = "num"
+
+                    buttons.append({
+                        "label": label,
+                        "type": button_type,
+                        "x": x,
+                        "y": y,
+                        "w": button_w,
+                        "h": button_h,
+                    })
+
+        return buttons
 
     def make_question(self):
         # まだレベルが選ばれていない場合は何もしない
@@ -355,17 +484,7 @@ class App:
             self.game_over_timer -= 1
 
             if self.game_over_timer <= 0:
-                self.player_defeated = False
-                self.player_hp = self.player_max_hp
-
-                self.current_monster_index = 0
-                self.monster_max_hp = self.monsters[self.current_monster_index]["max_hp"]
-                self.monster_hp = self.monster_max_hp
-
-                self.score = 0
-                self.message = ""
-                self.input_text = ""
-                self.make_question()
+                self.return_to_title_after_game_over()
 
             return
 
@@ -462,23 +581,18 @@ class App:
             self.update_ranking()
     
     def update_title(self):
-        if pyxel.btnp(pyxel.KEY_UP):
-            self.selected_level_index -= 1
-            if self.selected_level_index < 0:
-                self.selected_level_index = len(self.levels) - 1
+        start_y = 66
+        button_x = 22
+        button_w = 212
+        button_h = 16
 
-        if pyxel.btnp(pyxel.KEY_DOWN):
-            self.selected_level_index += 1
-            if self.selected_level_index >= len(self.levels):
-                self.selected_level_index = 0
+        # レベルボタンをクリック
+        for i, level in enumerate(self.levels):
+            y = start_y + i * 22
 
-        for i in range(len(self.levels)):
-            key = getattr(pyxel, f"KEY_{i + 1}")
-            if pyxel.btnp(key):
+            if self.is_clicked(button_x, y, button_w, button_h):
                 self.select_level(i)
-
-        if pyxel.btnp(pyxel.KEY_RETURN):
-            self.select_level(self.selected_level_index)
+                return
 
         # ランキングボタンをクリック
         if self.is_clicked(
@@ -488,58 +602,88 @@ class App:
             self.ranking_button["h"]
         ):
             self.scene = "ranking"
-    
-    def update_count_select(self):
-        if pyxel.btnp(pyxel.KEY_UP) or pyxel.btnp(pyxel.KEY_LEFT):
-            self.selected_question_count_index -= 1
-            if self.selected_question_count_index < 0:
-                self.selected_question_count_index = len(self.question_count_options) - 1
+            return
 
-        if pyxel.btnp(pyxel.KEY_DOWN) or pyxel.btnp(pyxel.KEY_RIGHT):
-            self.selected_question_count_index += 1
-            if self.selected_question_count_index >= len(self.question_count_options):
-                self.selected_question_count_index = 0
-
-        for i in range(len(self.question_count_options)):
+        # 開発用にキーボード操作は残してもOK
+        for i in range(len(self.levels)):
             key = getattr(pyxel, f"KEY_{i + 1}")
             if pyxel.btnp(key):
+                self.select_level(i)
+                return
+    
+    def update_count_select(self):
+        button_x = 78
+        button_w = 100
+        button_h = 18
+        start_y = 72
+
+        for i, count in enumerate(self.question_count_options):
+            y = start_y + i * 26
+
+            if self.is_clicked(button_x, y, button_w, button_h):
                 self.selected_question_count_index = i
                 self.start_level()
+                return
 
-        if pyxel.btnp(pyxel.KEY_RETURN):
-            self.start_level()
-
-        if pyxel.btnp(pyxel.KEY_ESCAPE):
+        # タイトルにもどる
+        if self.is_clicked(58, 158, 140, 18):
             self.scene = "title"
+            return
 
     def update_name_input(self):
-        # A〜Z
-        for ch in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
-            key = getattr(pyxel, f"KEY_{ch}")
-            if pyxel.btnp(key):
-                if len(self.player_name) < self.max_name_length:
-                    self.player_name += ch
+        # 連続タップの受付時間を減らす
+        if self.kana_cycle_timer > 0:
+            self.kana_cycle_timer -= 1
 
-        # 0〜9
-        for i in range(10):
-            if pyxel.btnp(getattr(pyxel, f"KEY_{i}")):
-                if len(self.player_name) < self.max_name_length:
-                    self.player_name += str(i)
+            if self.kana_cycle_timer <= 0:
+                self.reset_kana_cycle()
 
-        # 1文字消す
-        if pyxel.btnp(pyxel.KEY_BACKSPACE):
-            self.player_name = self.player_name[:-1]
+        for button in self.get_name_input_buttons():
+            if self.is_clicked(button["x"], button["y"], button["w"], button["h"]):
+                button_type = button["type"]
 
-        # 決定
-        if pyxel.btnp(pyxel.KEY_RETURN):
-            self.save_pending_record()
-            self.scene = "ranking"
+                if button_type == "kana_group":
+                    for group in self.kana_groups:
+                        if group["label"] == button["label"]:
+                            self.input_kana_group(group)
+                            break
+
+                elif button_type == "num":
+                    if len(self.player_name) < self.max_name_length:
+                        self.player_name += button["label"]
+                    self.reset_kana_cycle()
+
+                elif button_type == "delete":
+                    self.player_name = self.player_name[:-1]
+                    self.reset_kana_cycle()
+
+                elif button_type == "dakuten":
+                    self.apply_mark_to_last_char("dakuten")
+
+                elif button_type == "handakuten":
+                    self.apply_mark_to_last_char("handakuten")
+
+                elif button_type == "toggle_num":
+                    self.name_input_mode = "num"
+                    self.reset_kana_cycle()
+
+                elif button_type == "toggle_kana":
+                    self.name_input_mode = "kana"
+                    self.reset_kana_cycle()
+
+                elif button_type == "ok":
+                    self.save_pending_record()
+                    self.reset_kana_cycle()
+                    self.scene = "ranking"
+
+                return
 
     def update_ranking(self):
-        if pyxel.btnp(pyxel.KEY_RETURN) or pyxel.btnp(pyxel.KEY_ESCAPE):
+        if self.is_clicked(58, 164, 140, 18):
             self.message = ""
             self.input_text = ""
             self.scene = "title"
+            return
 
     def select_level(self, level_index):
         self.selected_level_index = level_index
@@ -590,6 +734,27 @@ class App:
 
         self.make_question()
         self.scene = "battle"
+
+    def return_to_title_after_game_over(self):
+        self.player_defeated = False
+        self.monster_defeated = False
+        self.attack_animating = False
+        self.monster_attack_animating = False
+        self.time_up_waiting = False
+
+        self.message = ""
+        self.input_text = ""
+
+        self.player_hp = self.player_max_hp
+
+        # 今選んでいたモンスターのHPを戻す
+        if self.current_level is not None:
+            self.current_monster_index = self.current_level["monster_index"]
+
+        self.monster_max_hp = self.target_question_count
+        self.monster_hp = self.monster_max_hp
+
+        self.scene = "title"
 
     def press_button(self, label):
         if label == "C":
@@ -770,27 +935,22 @@ class App:
         self.draw_keypad()
     
     def draw_title(self):
-        # タイトル
-        self.draw_center_text(0, 24, 256, "けいさんクエスト", 20, 7)
+        self.draw_center_text(0, 22, 256, "けいさん　クエスト", 12, 7)
+        self.draw_center_text(0, 46, 256, "レベルをえらんでね", 8, 10)
 
-        # 説明
-        self.draw_center_text(0, 48, 256, "レベルをえらんでね", 8, 10)
-
-        # レベル一覧
-        start_y = 72
+        start_y = 66
+        button_x = 22
+        button_w = 212
+        button_h = 16
 
         for i, level in enumerate(self.levels):
-            y = start_y + i * 18
+            y = start_y + i * 22
 
-            if i == self.selected_level_index:
-                # 選択中の行
-                pyxel.rect(24, y - 2, 208, 14, 1)
-                pyxel.rectb(24, y - 2, 208, 14, 7)
-                self.draw_text(34, y, "▶ " + level["name"], 8, 10)
-            else:
-                self.draw_text(42, y, level["name"], 8, 7)
+            pyxel.rect(button_x, y, button_w, button_h, 1)
+            pyxel.rectb(button_x, y, button_w, button_h, 7)
 
-        self.draw_center_text(0, 150, 256, "↑↓でえらぶ / Enterでけってい", 8, 7)
+            color = 10 if i == self.selected_level_index else 7
+            self.draw_center_text(button_x, y + 4, button_w, level["name"], 8, color)
 
         # ランキングボタン
         x = self.ranking_button["x"]
@@ -805,14 +965,21 @@ class App:
     def draw_text(self, x, y, text, size=8, color=7):
         writer.draw(x, y, text, size, color)
 
-    def draw_name_input(self):
-        self.draw_center_text(0, 24, 256, "きろくこうしん！", 12, 8)
-        self.draw_center_text(0, 52, 256, "なまえをいれてね", 8, 10)
+    def is_clicked(self, x, y, w, h):
+        if pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT):
+            mx = pyxel.mouse_x
+            my = pyxel.mouse_y
+            return x <= mx <= x + w and y <= my <= y + h
 
-        # 結果
+        return False
+
+    def draw_name_input(self):
+        self.draw_center_text(0, 12, 256, "きろくこうしん！", 12, 8)
+        self.draw_center_text(0, 36, 256, "なまえをいれてね", 8, 10)
+
         self.draw_center_text(
             0,
-            76,
+            54,
             256,
             f"じかん：{self.clear_time_sec}びょう / ミス：{self.miss_count}かい",
             8,
@@ -820,19 +987,37 @@ class App:
         )
 
         # 名前入力欄
-        pyxel.rect(58, 104, 140, 18, 1)
-        pyxel.rectb(58, 104, 140, 18, 7)
+        pyxel.rect(58, 70, 140, 16, 1)
+        pyxel.rectb(58, 70, 140, 16, 7)
 
         display_name = self.player_name
-
-        # カーソル点滅
         if pyxel.frame_count % 30 < 15:
             display_name += "_"
 
-        self.draw_center_text(58, 109, 140, display_name, 8, 10)
+        self.draw_center_text(58, 74, 140, display_name, 8, 10)
 
-        self.draw_center_text(0, 144, 256, "A-Z / 0-9 でにゅうりょく", 8, 7)
-        self.draw_center_text(0, 160, 256, "Enterでけってい", 8, 7)
+        # 入力モード
+        mode_text = "かな" if self.name_input_mode == "kana" else "すうじ"
+        self.draw_text(18, 184, f"モード:{mode_text}", 8, 7)
+
+        # ボタン描画
+        for button in self.get_name_input_buttons():
+            x = button["x"]
+            y = button["y"]
+            w = button["w"]
+            h = button["h"]
+
+            pyxel.rect(x, y, w, h, 5)
+            pyxel.rectb(x, y, w, h, 7)
+
+            self.draw_center_text(
+                x,
+                y + 4,
+                w,
+                button["label"],
+                8,
+                7
+            )
 
     def draw_ranking(self):
         self.draw_center_text(0, 12, 256, "ランキング", 12, 10)
@@ -859,16 +1044,16 @@ class App:
             for i, record in enumerate(records[:self.max_ranking_count]):
                 y = start_y + i * 18
 
-                name = record.get("name", "NO NAME")
+                name = record.get("name", "なまえ　なし")
                 time = record["clear_time_sec"]
                 miss = record["miss_count"]
 
-                text = f"{i + 1}. {name} {time}びょう ミス{miss}"
+                text = f"{i + 1}. {name}　：　{time}びょう ミス{miss}"
 
                 color = 10 if i == 0 else 7
                 self.draw_text(24, y, text, 8, color)
 
-        self.draw_center_text(0, 170, 256, "Enter / Escでタイトルへ", 8, 7)
+        self.draw_center_text(0, 170, 256, "タイトルにもどる", 8, 7)
 
     def is_clicked(self, x, y, w, h):
         if pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT):
@@ -885,26 +1070,29 @@ class App:
         writer.draw(draw_x, y, text, size, color)
     
     def draw_count_select(self):
-        self.draw_center_text(0, 24, 256, "もんだいすうをえらんでね", 8, 10)
+        self.draw_center_text(0, 22, 256, "もんだいすうをえらんでね", 8, 10)
 
         if self.current_level is not None:
-            self.draw_center_text(0, 48, 256, self.current_level["name"], 8, 7)
+            self.draw_center_text(0, 46, 256, self.current_level["name"], 8, 7)
 
-        start_y = 76
+        button_x = 78
+        button_w = 100
+        button_h = 18
+        start_y = 72
 
         for i, count in enumerate(self.question_count_options):
-            y = start_y + i * 20
-            text = f"{i + 1}. {count}もん"
+            y = start_y + i * 26
 
-            if i == self.selected_question_count_index:
-                pyxel.rect(70, y - 2, 116, 14, 1)
-                pyxel.rectb(70, y - 2, 116, 14, 7)
-                self.draw_text(84, y, "▶ " + text, 8, 10)
-            else:
-                self.draw_text(100, y, text, 8, 7)
+            pyxel.rect(button_x, y, button_w, button_h, 1)
+            pyxel.rectb(button_x, y, button_w, button_h, 7)
 
-        self.draw_center_text(0, 156, 256, "↑↓でえらぶ / Enterでけってい", 8, 7)
-        self.draw_center_text(0, 170, 256, "Escでタイトルにもどる", 8, 7)
+            color = 10 if i == self.selected_question_count_index else 7
+            self.draw_center_text(button_x, y + 5, button_w, f"{count}もん", 8, color)
+
+        # タイトルにもどるボタン
+        pyxel.rect(58, 158, 140, 18, 1)
+        pyxel.rectb(58, 158, 140, 18, 7)
+        self.draw_center_text(58, 163, 140, "タイトルにもどる", 8, 7)
     
     def draw_clear(self):
         self.draw_center_text(0, 24, 256, "ステージクリア！", 12, 10)
@@ -1153,7 +1341,7 @@ class App:
 
         name = self.player_name.strip()
         if name == "":
-            name = "NO NAME"
+            name = "なまえ　なし"
 
         new_record = self.pending_record.copy()
         new_record["name"] = name
@@ -1174,6 +1362,56 @@ class App:
 
         self.pending_record = None
         self.player_name = ""
+    
+    def apply_mark_to_last_char(self, mark_type):
+        if self.player_name == "":
+            return
+
+        last_char = self.player_name[-1]
+        before_text = self.player_name[:-1]
+
+        if mark_type == "dakuten":
+            converted_char = self.dakuten_map.get(last_char)
+        elif mark_type == "handakuten":
+            converted_char = self.handakuten_map.get(last_char)
+        else:
+            converted_char = None
+
+        if converted_char is not None:
+            self.player_name = before_text + converted_char
+            self.reset_kana_cycle()
+
+    def reset_kana_cycle(self):
+        self.active_kana_label = None
+        self.active_kana_index = 0
+        self.kana_cycle_timer = 0
+
+    def input_kana_group(self, group):
+        chars = group["chars"]
+
+        # 同じキーを制限時間内に押したら、最後の文字を切り替える
+        if (
+            self.active_kana_label == group["label"]
+            and self.kana_cycle_timer > 0
+            and self.player_name != ""
+        ):
+            self.active_kana_index += 1
+
+            if self.active_kana_index >= len(chars):
+                self.active_kana_index = 0
+
+            self.player_name = self.player_name[:-1] + chars[self.active_kana_index]
+
+        # 違うキー、または時間が空いたら、新しい文字として追加
+        else:
+            if len(self.player_name) >= self.max_name_length:
+                return
+
+            self.active_kana_label = group["label"]
+            self.active_kana_index = 0
+            self.player_name += chars[0]
+
+        self.kana_cycle_timer = self.kana_cycle_limit
 
 
 App()

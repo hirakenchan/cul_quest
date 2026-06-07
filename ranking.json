@@ -52,8 +52,32 @@
   ],
   "one_digit_multiply_5": [
     {
+      "name": "けんた",
+      "level_name": "3. 1けた かけざん",
+      "level_type": "one_digit_multiply",
+      "question_count": 5,
+      "clear_time_sec": 8,
+      "miss_count": 0
+    },
+    {
       "name": "かれん",
       "level_name": "3. 1けた かけざん",
+      "level_type": "one_digit_multiply",
+      "question_count": 5,
+      "clear_time_sec": 10,
+      "miss_count": 0
+    },
+    {
+      "name": "たちた",
+      "level_name": "3. 1けた かけざん",
+      "level_type": "one_digit_multiply",
+      "question_count": 5,
+      "clear_time_sec": 10,
+      "miss_count": 0
+    },
+    {
+      "name": "けんた",
+      "level_name": "1けた かけざん",
       "level_type": "one_digit_multiply",
       "question_count": 5,
       "clear_time_sec": 10,
@@ -61,6 +85,22 @@
     }
   ],
   "two_digit_add_sub_5": [
+    {
+      "name": "あかさたな",
+      "level_name": "2. 2けた たしざん・ひきざん",
+      "level_type": "two_digit_add_sub",
+      "question_count": 5,
+      "clear_time_sec": 14,
+      "miss_count": 0
+    },
+    {
+      "name": "けんた",
+      "level_name": "2けた たしざん・ひきざん",
+      "level_type": "two_digit_add_sub",
+      "question_count": 5,
+      "clear_time_sec": 17,
+      "miss_count": 0
+    },
     {
       "name": "NO NAME",
       "level_name": "2. 2けた たしざん・ひきざん",
@@ -72,11 +112,55 @@
   ],
   "simple_divide_5": [
     {
+      "name": "ふ",
+      "level_name": "4. かんたん わりざん",
+      "level_type": "simple_divide",
+      "question_count": 5,
+      "clear_time_sec": 11,
+      "miss_count": 0
+    },
+    {
+      "name": "けんた",
+      "level_name": "かんたん わりざん",
+      "level_type": "simple_divide",
+      "question_count": 5,
+      "clear_time_sec": 11,
+      "miss_count": 0
+    },
+    {
       "name": "あ123",
       "level_name": "4. かんたん わりざん",
       "level_type": "simple_divide",
       "question_count": 5,
       "clear_time_sec": 13,
+      "miss_count": 0
+    }
+  ],
+  "all_random_5": [
+    {
+      "name": "あ",
+      "level_name": "ぜんぶ",
+      "level_type": "all_random",
+      "question_count": 5,
+      "clear_time_sec": 9,
+      "miss_count": 0
+    },
+    {
+      "name": "げんた",
+      "level_name": "ぜんぶ",
+      "level_type": "all_random",
+      "question_count": 5,
+      "clear_time_sec": 19,
+      "miss_count": 0
+    }
+  ],
+  "all_random_20": [
+    {
+      "name": "けんた",
+      "level_name": "ぜんぶ",
+      "level_type": "all_random",
+      "question_count": 20,
+      "clear_time_sec": 42,
       "miss_count": 0
     }
   ]

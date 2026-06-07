@@ -13,6 +13,41 @@ class App:
         pyxel.init(256, 192, title="Math Quest", fps=self.fps)
         pyxel.mouse(True)  # PCテスト用
 
+        # サウンド番号
+        self.SOUND_OPENING_BGM = 0
+        self.SOUND_BATTLE_BGM = 1
+        self.SOUND_LAST_BATTLE_BGM = 2
+
+        self.SOUND_SLIME_ATTACK = 3
+        self.SOUND_GHOST_ATTACK = 4
+        self.SOUND_GOREM_ATTACK = 5
+        self.SOUND_DRAGON_ATTACK = 6
+        self.SOUND_KING_ATTACK = 7
+
+        self.SOUND_HERO_ATTACK = 8
+        self.SOUND_CHEERS = 9
+
+        # チャンネル番号
+        self.BGM_CHANNEL = 0
+        self.SE_CHANNEL = 1
+
+        # 現在流れているBGM
+        self.current_bgm = None
+
+        # 音声ファイル読み込み
+        pyxel.sounds[self.SOUND_OPENING_BGM].pcm("sounds/opening_music.ogg")
+        pyxel.sounds[self.SOUND_BATTLE_BGM].pcm("sounds/battle_music.ogg")
+        pyxel.sounds[self.SOUND_LAST_BATTLE_BGM].pcm("sounds/last_battle_music.ogg")
+
+        pyxel.sounds[self.SOUND_SLIME_ATTACK].pcm("sounds/slime_sound.ogg")
+        pyxel.sounds[self.SOUND_GHOST_ATTACK].pcm("sounds/ghost_sound.ogg")
+        pyxel.sounds[self.SOUND_GOREM_ATTACK].pcm("sounds/gorem_sound.ogg")
+        pyxel.sounds[self.SOUND_DRAGON_ATTACK].pcm("sounds/dragon_sound.ogg")
+        pyxel.sounds[self.SOUND_KING_ATTACK].pcm("sounds/king_sound.ogg")
+
+        pyxel.sounds[self.SOUND_HERO_ATTACK].pcm("sounds/slash_sound.ogg")
+        pyxel.sounds[self.SOUND_CHEERS].pcm("sounds/cheers_sound.ogg")
+
         # 画像サイズ
         self.sprite_size = 38
 
@@ -25,64 +60,84 @@ class App:
         pyxel.images[2].load(0, 0, "ghost.png")       # 38×38
         pyxel.images[2].load(48, 0, "gorem.png")      # 46×46
         pyxel.images[2].load(104, 0, "dragon.png")    # 72×72
+        pyxel.images[2].load(184, 0, "king.png")      # 72×72
+
+        # タイトル画面用アイコン
+        self.title_icon_size = 24
+
+        pyxel.images[0].load(48, 0, "shield.png")
+        pyxel.images[0].load(80, 0, "sword.png")
 
         self.player_max_hp = 5
 
         # モンスター情報
         self.monsters = [
-            {
-                "name": "スライム",
-                "image_bank": 1,
-                "image_x": 0,
-                "image_y": 0,
-                "image_w": 38,
-                "image_h": 38,
-                "draw_x": 50,
-                "draw_y": 42,
-                "name_box_x": 30,
-                "name_box_w": 80,
-                "name_y": 80,
-                "max_hp": 5,
-            },
-            {
-                "name": "ゴースト",
-                "image_bank": 2,
-                "image_x": 0,
-                "image_y": 0,
-                "image_w": 38,
-                "image_h": 38,
-                "draw_x": 50,
-                "draw_y": 42,
-                "name_box_x": 30,
-                "name_box_w": 80,
-                "name_y": 80,
-                "max_hp": 8,
-            },
-            {
-                "name": "ゴーレム",
-                "image_bank": 2,
-                "image_x": 48,
-                "image_y": 0,
-                "image_w": 46,
-                "image_h": 46,
-                "draw_x": 45,
-                "draw_y": 36,
-                "name_y": 82,
-                "max_hp": 10,
-            },
-            {
-                "name": "ドラゴン",
-                "image_bank": 2,
-                "image_x": 104,
-                "image_y": 0,
-                "image_w": 72,
-                "image_h": 72,
-                "draw_x": 22,
-                "draw_y": 12,
-                "name_y": 82,
-                "max_hp": 18,
-            },
-        ]
+        {
+            "name": "スライム",
+            "image_bank": 1,
+            "image_x": 0,
+            "image_y": 0,
+            "image_w": 38,
+            "image_h": 38,
+            "draw_x": 38,
+            "draw_y": 40,
+            "name_y": 76,
+            "max_hp": 5,
+            "attack_sound": self.SOUND_SLIME_ATTACK,
+        },
+        {
+            "name": "ゴースト",
+            "image_bank": 2,
+            "image_x": 0,
+            "image_y": 0,
+            "image_w": 38,
+            "image_h": 38,
+            "draw_x": 38,
+            "draw_y": 38,
+            "name_y": 76,
+            "max_hp": 5,
+            "attack_sound": self.SOUND_GHOST_ATTACK,
+        },
+        {
+            "name": "ゴーレム",
+            "image_bank": 2,
+            "image_x": 48,
+            "image_y": 0,
+            "image_w": 46,
+            "image_h": 46,
+            "draw_x": 34,
+            "draw_y": 30,
+            "name_y": 76,
+            "max_hp": 5,
+            "attack_sound": self.SOUND_GOREM_ATTACK,
+        },
+        {
+            "name": "ドラゴン",
+            "image_bank": 2,
+            "image_x": 104,
+            "image_y": 0,
+            "image_w": 72,
+            "image_h": 72,
+            "draw_x": 22,
+            "draw_y": 12,
+            "name_y": 82,
+            "max_hp": 5,
+            "attack_sound": self.SOUND_DRAGON_ATTACK,
+        },
+        {
+            "name": "まおう",
+            "image_bank": 2,
+            "image_x": 184,
+            "image_y": 0,
+            "image_w": 72,
+            "image_h": 72,
+            "draw_x": 22,
+            "draw_y": 12,
+            "name_y": 82,
+            "max_hp": 5,
+            "attack_sound": self.SOUND_KING_ATTACK,
+        },
+    ]
 
         self.current_monster_index = 0
         self.monster_max_hp = self.monsters[self.current_monster_index]["max_hp"]
@@ -101,33 +156,53 @@ class App:
 
         # レベル情報
         self.levels = [
-            {
-                "name": "1. 1けた たしざん・ひきざん",
-                "type": "one_digit_add_sub",
-                "monster_index": 0,
-            },
-            {
-                "name": "2. 2けた たしざん・ひきざん",
-                "type": "two_digit_add_sub",
-                "monster_index": 1,
-            },
-            {
-                "name": "3. 1けた かけざん",
-                "type": "one_digit_multiply",
-                "monster_index": 2,
-            },
-            {
-                "name": "4. かんたん わりざん",
-                "type": "simple_divide",
-                "monster_index": 3,
-            },
-        ]
+        {
+            "name": "1けた たしざん・ひきざん",
+            "type": "one_digit_add_sub",
+            "monster_index": 0,
+        },
+        {
+            "name": "2けた たしざん・ひきざん",
+            "type": "two_digit_add_sub",
+            "monster_index": 1,
+        },
+        {
+            "name": "1けた かけざん",
+            "type": "one_digit_multiply",
+            "monster_index": 2,
+        },
+        {
+            "name": "かんたん わりざん",
+            "type": "simple_divide",
+            "monster_index": 3,
+        },
+        {
+            "name": "ぜんぶ",
+            "type": "all_random",
+            "monster_index": 4,
+        },
+    ]
 
-        # トップ画面のボタン範囲
+        # タイトル画面レイアウト
+        self.title_level_x = 20
+        self.title_level_y = 56
+        self.title_level_w = 216
+        self.title_level_h = 14
+        self.title_level_gap = 5
+
+        # ランキングボタン
         self.ranking_button = {
-            "x": 78,
+            "x": 134,
             "y": 166,
             "w": 100,
+            "h": 16,
+        }
+
+        # 素材提供ボタン
+        self.credit_button = {
+            "x": 20,
+            "y": 166,
+            "w": 88,
             "h": 16,
         }
 
@@ -211,13 +286,6 @@ class App:
             ("C", 24, 176), ("0", 104, 176), ("OK", 184, 176),
         ]
 
-        self.ranking_button = {
-            "x": 78,
-            "y": 166,
-            "w": 100,
-            "h": 16,
-        }
-
         # 名前入力
         self.player_name = ""
         self.max_name_length = 5
@@ -256,6 +324,22 @@ class App:
         }
 
         pyxel.run(self.update, self.draw)
+
+    def play_bgm(self, sound_id):
+        if self.current_bgm == sound_id:
+            return
+
+        pyxel.stop(self.BGM_CHANNEL)
+        pyxel.play(self.BGM_CHANNEL, sound_id, loop=True)
+        self.current_bgm = sound_id
+
+
+    def stop_bgm(self):
+        pyxel.stop(self.BGM_CHANNEL)
+        self.current_bgm = None
+    
+    def play_se(self, sound_id):
+        pyxel.play(self.SE_CHANNEL, sound_id)
     
     def get_name_input_buttons(self):
         buttons = []
@@ -342,53 +426,79 @@ class App:
         return buttons
 
     def make_question(self):
-        # まだレベルが選ばれていない場合は何もしない
-        if self.current_level is None:
-            return
-
         level_type = self.current_level["type"]
 
-        if level_type == "one_digit_add_sub":
-            op = random.choice(["+", "-"])
-            self.a = random.randint(1, 9)
-            self.b = random.randint(1, 9)
+        # 「ぜんぶ」ステージなら、そのたびに種類をランダム決定
+        if level_type == "all_random":
+            question_type = random.choice([
+                "one_digit_add_sub",
+                "two_digit_add_sub",
+                "one_digit_multiply",
+                "simple_divide",
+            ])
+        else:
+            question_type = level_type
 
-            if op == "+":
-                self.answer = self.a + self.b
-            else:
-                if self.a < self.b:
-                    self.a, self.b = self.b, self.a
-                self.answer = self.a - self.b
+        if question_type == "one_digit_add_sub":
+            self.make_one_digit_add_sub_question()
 
-        elif level_type == "two_digit_add_sub":
-            op = random.choice(["+", "-"])
-            self.a = random.randint(10, 49)
-            self.b = random.randint(10, 49)
+        elif question_type == "two_digit_add_sub":
+            self.make_two_digit_add_sub_question()
 
-            if op == "+":
-                self.answer = self.a + self.b
-            else:
-                if self.a < self.b:
-                    self.a, self.b = self.b, self.a
-                self.answer = self.a - self.b
+        elif question_type == "one_digit_multiply":
+            self.make_one_digit_multiply_question()
 
-        elif level_type == "one_digit_multiply":
-            op = "x"
-            self.a = random.randint(1, 9)
-            self.b = random.randint(1, 9)
-            self.answer = self.a * self.b
+        elif question_type == "simple_divide":
+            self.make_simple_divide_question()
 
-        elif level_type == "simple_divide":
-            op = "÷"
-
-            # 割り切れる問題だけ作る
-            self.b = random.randint(2, 9)
-            self.answer = random.randint(2, 9)
-            self.a = self.b * self.answer
-
-        self.op = op
         self.input_text = ""
         self.time_left = self.time_limit
+    
+    def make_one_digit_add_sub_question(self):
+        op = random.choice(["+", "-"])
+
+        self.a = random.randint(1, 9)
+        self.b = random.randint(1, 9)
+
+        if op == "+":
+            self.answer = self.a + self.b
+        else:
+            if self.a < self.b:
+                self.a, self.b = self.b, self.a
+            self.answer = self.a - self.b
+
+        self.op = op
+
+
+    def make_two_digit_add_sub_question(self):
+        op = random.choice(["+", "-"])
+
+        self.a = random.randint(10, 99)
+        self.b = random.randint(10, 99)
+
+        if op == "+":
+            self.answer = self.a + self.b
+        else:
+            if self.a < self.b:
+                self.a, self.b = self.b, self.a
+            self.answer = self.a - self.b
+
+        self.op = op
+
+
+    def make_one_digit_multiply_question(self):
+        self.a = random.randint(1, 9)
+        self.b = random.randint(1, 9)
+        self.answer = self.a * self.b
+        self.op = "x"
+
+
+    def make_simple_divide_question(self):
+        # 割り切れる問題だけ作る
+        self.b = random.randint(1, 9)
+        self.answer = random.randint(1, 9)
+        self.a = self.b * self.answer
+        self.op = "÷"
 
     def load_ranking(self):
         if not os.path.exists(self.ranking_file):
@@ -446,6 +556,8 @@ class App:
         return False
     
     def finish_stage(self):
+        self.stop_bgm()
+        self.play_se(self.SOUND_CHEERS)
         self.clear_time_sec = self.elapsed_frames // self.fps
 
         new_record = {
@@ -579,18 +691,18 @@ class App:
             self.update_name_input()
         elif self.scene == "ranking":
             self.update_ranking()
+        elif self.scene == "credit":
+            self.update_credit()
     
     def update_title(self):
-        start_y = 66
-        button_x = 22
-        button_w = 212
-        button_h = 16
+        # タイトルBGM
+        self.play_bgm(self.SOUND_OPENING_BGM)
 
         # レベルボタンをクリック
         for i, level in enumerate(self.levels):
-            y = start_y + i * 22
+            y = self.title_level_y + i * (self.title_level_h + self.title_level_gap)
 
-            if self.is_clicked(button_x, y, button_w, button_h):
+            if self.is_clicked(self.title_level_x, y, self.title_level_w, self.title_level_h):
                 self.select_level(i)
                 return
 
@@ -604,12 +716,15 @@ class App:
             self.scene = "ranking"
             return
 
-        # 開発用にキーボード操作は残してもOK
-        for i in range(len(self.levels)):
-            key = getattr(pyxel, f"KEY_{i + 1}")
-            if pyxel.btnp(key):
-                self.select_level(i)
-                return
+        # 素材提供ボタンをクリック
+        if self.is_clicked(
+            self.credit_button["x"],
+            self.credit_button["y"],
+            self.credit_button["w"],
+            self.credit_button["h"]
+        ):
+            self.scene = "credit"
+            return
     
     def update_count_select(self):
         button_x = 78
@@ -677,6 +792,35 @@ class App:
                     self.scene = "ranking"
 
                 return
+    
+    def update_credit(self):
+        # タイトルBGMをそのまま流す
+        self.play_bgm(self.SOUND_OPENING_BGM)
+
+        # タイトルにもどるボタン
+        if self.is_clicked(58, 158, 140, 18):
+            self.scene = "title"
+            return
+    
+    def draw_credit(self):
+        self.draw_center_text(0, 20, 256, "ていきょう", 14, 10)
+
+        # BGM
+        pyxel.rect(28, 58, 200, 30, 1)
+        pyxel.rectb(28, 58, 200, 30, 7)
+        self.draw_text(48, 70, "BGM", 8, 7)
+        self.draw_text(112, 66, "魔王魂", 16, 10)
+
+        # 効果音
+        pyxel.rect(28, 102, 200, 30, 1)
+        pyxel.rectb(28, 102, 200, 30, 7)
+        self.draw_text(40, 114, "こうかおん", 8, 7)
+        self.draw_text(100, 110, "効果音ラボ", 16, 10)
+
+        # 戻るボタン
+        pyxel.rect(58, 158, 140, 18, 1)
+        pyxel.rectb(58, 158, 140, 18, 7)
+        self.draw_center_text(58, 163, 140, "タイトルにもどる", 8, 7)
 
     def update_ranking(self):
         if self.is_clicked(58, 164, 140, 18):
@@ -690,11 +834,6 @@ class App:
         self.current_level = self.levels[level_index]
 
         # 問題数選択は毎回10問から開始
-        self.selected_question_count_index = 1
-
-        self.scene = "count_select"
-
-        # 問題数選択は毎回10問から始める
         self.selected_question_count_index = 1
 
         self.scene = "count_select"
@@ -733,6 +872,14 @@ class App:
         self.time_up_waiting = False
 
         self.make_question()
+
+        current_monster = self.monsters[self.current_monster_index]
+
+        if current_monster["name"] == "まおう":
+            self.play_bgm(self.SOUND_LAST_BATTLE_BGM)
+        else:
+            self.play_bgm(self.SOUND_BATTLE_BGM)
+
         self.scene = "battle"
 
     def return_to_title_after_game_over(self):
@@ -790,6 +937,9 @@ class App:
 
         self.message = "せいかい！"
         self.message_color = 8
+
+        # 勇者の攻撃音
+        self.play_se(self.SOUND_HERO_ATTACK)
     
     def start_monster_attack(self):
         self.monster_attack_animating = True
@@ -802,6 +952,10 @@ class App:
 
         self.message = "まちがい！"
         self.message_color = 12
+
+        # 現在のモンスターの攻撃音
+        current_monster = self.monsters[self.current_monster_index]
+        self.play_se(current_monster["attack_sound"])
 
 
     def update_monster_attack_animation(self):
@@ -920,6 +1074,8 @@ class App:
             self.draw_name_input()
         elif self.scene == "ranking":
             self.draw_ranking()
+        elif self.scene == "credit":
+            self.draw_credit()
 
     def draw_battle(self):
         pyxel.cls(0)
@@ -935,32 +1091,54 @@ class App:
         self.draw_keypad()
     
     def draw_title(self):
-        self.draw_center_text(0, 22, 256, "けいさん　クエスト", 12, 7)
-        self.draw_center_text(0, 46, 256, "レベルをえらんでね", 8, 10)
+        # 左上：盾
+        pyxel.blt(18, 16, 0, 48, 0, self.title_icon_size, self.title_icon_size, 0)
 
-        start_y = 66
-        button_x = 22
-        button_w = 212
-        button_h = 16
+        # 右上：剣
+        pyxel.blt(214, 16, 0, 80, 0, self.title_icon_size, self.title_icon_size, 0)
 
+        # タイトル
+        self.draw_center_text(0, 18, 256, "けいさん　クエスト", 12, 7)
+
+        # サブタイトル
+        self.draw_center_text(0, 40, 256, "レベルをえらんでね", 8, 10)
+
+        # レベルボタン
         for i, level in enumerate(self.levels):
-            y = start_y + i * 22
+            y = self.title_level_y + i * (self.title_level_h + self.title_level_gap)
 
-            pyxel.rect(button_x, y, button_w, button_h, 1)
-            pyxel.rectb(button_x, y, button_w, button_h, 7)
+            pyxel.rect(self.title_level_x, y, self.title_level_w, self.title_level_h, 1)
+            pyxel.rectb(self.title_level_x, y, self.title_level_w, self.title_level_h, 7)
 
             color = 10 if i == self.selected_level_index else 7
-            self.draw_center_text(button_x, y + 4, button_w, level["name"], 8, color)
+            self.draw_center_text(
+                self.title_level_x,
+                y + 3,
+                self.title_level_w,
+                level["name"],
+                8,
+                color
+            )
+
+        # 素材提供ボタン
+        cx = self.credit_button["x"]
+        cy = self.credit_button["y"]
+        cw = self.credit_button["w"]
+        ch = self.credit_button["h"]
+
+        pyxel.rect(cx, cy, cw, ch, 1)
+        pyxel.rectb(cx, cy, cw, ch, 7)
+        self.draw_center_text(cx, cy + 4, cw, "ていきょう", 8, 7)
 
         # ランキングボタン
-        x = self.ranking_button["x"]
-        y = self.ranking_button["y"]
-        w = self.ranking_button["w"]
-        h = self.ranking_button["h"]
+        rx = self.ranking_button["x"]
+        ry = self.ranking_button["y"]
+        rw = self.ranking_button["w"]
+        rh = self.ranking_button["h"]
 
-        pyxel.rect(x, y, w, h, 1)
-        pyxel.rectb(x, y, w, h, 7)
-        self.draw_center_text(x, y + 4, w, "ランキング", 8, 10)
+        pyxel.rect(rx, ry, rw, rh, 1)
+        pyxel.rectb(rx, ry, rw, rh, 7)
+        self.draw_center_text(rx, ry + 4, rw, "ランキング", 8, 10)
 
     def draw_text(self, x, y, text, size=8, color=7):
         writer.draw(x, y, text, size, color)

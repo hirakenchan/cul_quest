@@ -1,8 +1,8 @@
 from PIL import Image
 
 
-INPUT_FILE = "gorem_original.png"
-OUTPUT_FILE = "gorem.png"
+INPUT_FILE = "sword_original.png"
+OUTPUT_FILE = "sword.png"
 
 # 元画像を開く
 img = Image.open(INPUT_FILE).convert("RGBA")
@@ -36,7 +36,7 @@ square.paste(
 )
 
 # ゲーム用サイズに縮小
-sprite = square.resize((46, 46), Image.Resampling.NEAREST)
+sprite = square.resize((24, 24), Image.Resampling.NEAREST)
 
 # ほぼ黒を透明にする
 data = []

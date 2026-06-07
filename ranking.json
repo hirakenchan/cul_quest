@@ -52,6 +52,14 @@
   ],
   "one_digit_multiply_5": [
     {
+      "name": "いあ",
+      "level_name": "1けた かけざん",
+      "level_type": "one_digit_multiply",
+      "question_count": 5,
+      "clear_time_sec": 7,
+      "miss_count": 0
+    },
+    {
       "name": "けんた",
       "level_name": "3. 1けた かけざん",
       "level_type": "one_digit_multiply",
@@ -112,6 +120,22 @@
   ],
   "simple_divide_5": [
     {
+      "name": "ぁかさたなはまやらわ",
+      "level_name": "かんたん わりざん",
+      "level_type": "simple_divide",
+      "question_count": 5,
+      "clear_time_sec": 8,
+      "miss_count": 0
+    },
+    {
+      "name": "あかさたなはまやらわ",
+      "level_name": "かんたん わりざん",
+      "level_type": "simple_divide",
+      "question_count": 5,
+      "clear_time_sec": 8,
+      "miss_count": 0
+    },
+    {
       "name": "ふ",
       "level_name": "4. かんたん わりざん",
       "level_type": "simple_divide",
@@ -151,6 +175,14 @@
       "level_type": "all_random",
       "question_count": 5,
       "clear_time_sec": 19,
+      "miss_count": 0
+    },
+    {
+      "name": "かれん",
+      "level_name": "ぜんぶ",
+      "level_type": "all_random",
+      "question_count": 5,
+      "clear_time_sec": 20,
       "miss_count": 0
     }
   ],

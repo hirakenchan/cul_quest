@@ -156,34 +156,55 @@ class App:
         self.selected_level_index = 0
         self.current_level = None
 
+        # ランキング表示用
+        self.selected_ranking_level_index = 0
+        self.selected_ranking_count_index = 1
+
+        self.ranking_view_level = None
+        self.ranking_view_count = None
+
         # レベル情報
         self.levels = [
-        {
-            "name": "1けた たしざん・ひきざん",
-            "type": "one_digit_add_sub",
-            "monster_index": 0,
-        },
-        {
-            "name": "2けた たしざん・ひきざん",
-            "type": "two_digit_add_sub",
-            "monster_index": 1,
-        },
-        {
-            "name": "1けた かけざん",
-            "type": "one_digit_multiply",
-            "monster_index": 2,
-        },
-        {
-            "name": "かんたん わりざん",
-            "type": "simple_divide",
-            "monster_index": 3,
-        },
-        {
-            "name": "ぜんぶ",
-            "type": "all_random",
-            "monster_index": 4,
-        },
-    ]
+            {
+                "name": "1けた たしざん・ひきざん",
+                "type": "one_digit_add_sub",
+                "monster_index": 0,
+            },
+            {
+                "name": "2けた たしざん・ひきざん",
+                "type": "two_digit_add_sub",
+                "monster_index": 1,
+            },
+            {
+                "name": "1けた かけざん",
+                "type": "one_digit_multiply",
+                "monster_index": 2,
+            },
+            {
+                "name": "かんたん わりざん",
+                "type": "simple_divide",
+                "monster_index": 3,
+            },
+            {
+                "name": "ぜんぶ",
+                "type": "all_random",
+                "monster_index": 4,
+            },
+        ]
+
+        # 小文字変換
+        self.small_char_map = {
+            "あ": "ぁ",
+            "い": "ぃ",
+            "う": "ぅ",
+            "え": "ぇ",
+            "お": "ぉ",
+            "や": "ゃ",
+            "ゆ": "ゅ",
+            "よ": "ょ",
+            "つ": "っ",
+            "わ": "ゎ",
+        }
 
         # タイトル画面レイアウト
         self.title_level_x = 20
@@ -227,10 +248,6 @@ class App:
         # ランキング設定
         self.max_ranking_count = 5
         self.pending_record = None
-
-        # 名前入力
-        self.player_name = ""
-        self.max_name_length = 8
 
         # クリア結果用
         self.clear_time_sec = 0
@@ -290,7 +307,7 @@ class App:
 
         # 名前入力
         self.player_name = ""
-        self.max_name_length = 5
+        self.max_name_length = 10
         self.name_input_mode = "kana"  # kana / num
 
         # 連続タップ入力用
@@ -301,16 +318,16 @@ class App:
 
         # あかさたなキー
         self.kana_groups = [
-            {"label": "あ", "chars": ["あ", "い", "う", "え", "お"]},
+            {"label": "あ", "chars": ["あ", "い", "う", "え", "お", "ぁ", "ぃ", "ぅ", "ぇ", "ぉ"]},
             {"label": "か", "chars": ["か", "き", "く", "け", "こ"]},
             {"label": "さ", "chars": ["さ", "し", "す", "せ", "そ"]},
-            {"label": "た", "chars": ["た", "ち", "つ", "て", "と"]},
+            {"label": "た", "chars": ["た", "ち", "つ", "て", "と", "っ"]},
             {"label": "な", "chars": ["な", "に", "ぬ", "ね", "の"]},
             {"label": "は", "chars": ["は", "ひ", "ふ", "へ", "ほ"]},
             {"label": "ま", "chars": ["ま", "み", "む", "め", "も"]},
             {"label": "や", "chars": ["や", "ゆ", "よ", "ゃ", "ゅ", "ょ"]},
             {"label": "ら", "chars": ["ら", "り", "る", "れ", "ろ"]},
-            {"label": "わ", "chars": ["わ", "を", "ん", "っ", "ー"]},
+            {"label": "わ", "chars": ["わ", "を", "ん", "ー", "ゎ"]},
         ]
 
         # 濁点・半濁点変換
@@ -347,10 +364,10 @@ class App:
         buttons = []
 
         button_w = 54
-        button_h = 16
+        button_h = 15
         cols = [28, 101, 174]
-        start_y = 88
-        row_gap = 20
+        start_y = 92
+        row_gap = 17
 
         if self.name_input_mode == "kana":
             rows = [
@@ -693,6 +710,10 @@ class App:
             self.update_name_input()
         elif self.scene == "ranking":
             self.update_ranking()
+        elif self.scene == "ranking_level_select":
+            self.update_ranking_level_select()
+        elif self.scene == "ranking_count_select":
+            self.update_ranking_count_select()
         elif self.scene == "credit":
             self.update_credit()
     
@@ -715,7 +736,7 @@ class App:
             self.ranking_button["w"],
             self.ranking_button["h"]
         ):
-            self.scene = "ranking"
+            self.scene = "ranking_level_select"
             return
 
         # 素材提供ボタンをクリック
@@ -726,6 +747,26 @@ class App:
             self.credit_button["h"]
         ):
             self.scene = "credit"
+            return
+    
+    def update_ranking_level_select(self):
+        button_x = 20
+        button_y = 48
+        button_w = 216
+        button_h = 16
+        button_gap = 7
+
+        for i, level in enumerate(self.levels):
+            y = button_y + i * (button_h + button_gap)
+
+            if self.is_clicked(button_x, y, button_w, button_h):
+                self.selected_ranking_level_index = i
+                self.scene = "ranking_count_select"
+                return
+
+        # タイトルにもどる
+        if self.is_clicked(58, 164, 140, 18):
+            self.scene = "title"
             return
     
     def update_count_select(self):
@@ -805,7 +846,7 @@ class App:
             return
     
     def draw_credit(self):
-        self.draw_center_text(0, 20, 256, "ていきょう", 14, 10)
+        self.draw_center_text(0, 20, 256, "ていきょう", 16, 10)
 
         # BGM
         pyxel.rect(28, 58, 200, 30, 1)
@@ -866,6 +907,9 @@ class App:
         self.message = ""
         self.message_color = 7
         self.input_text = ""
+
+        self.ranking_view_level = None
+        self.ranking_view_count = None
 
         self.monster_defeated = False
         self.player_defeated = False
@@ -1076,6 +1120,10 @@ class App:
             self.draw_name_input()
         elif self.scene == "ranking":
             self.draw_ranking()
+        elif self.scene == "ranking_level_select":
+            self.draw_ranking_level_select()
+        elif self.scene == "ranking_count_select":
+            self.draw_ranking_count_select()
         elif self.scene == "credit":
             self.draw_credit()
 
@@ -1100,7 +1148,7 @@ class App:
         pyxel.blt(214, 16, 0, 80, 0, self.title_icon_size, self.title_icon_size, 0)
 
         # タイトル
-        self.draw_center_text(0, 18, 256, "けいさん　クエスト", 12, 7)
+        self.draw_center_text(0, 18, 256, "けいさん　クエスト", 16, 7)
 
         # サブタイトル
         self.draw_center_text(0, 40, 256, "レベルをえらんでね", 8, 10)
@@ -1141,6 +1189,80 @@ class App:
         pyxel.rect(rx, ry, rw, rh, 1)
         pyxel.rectb(rx, ry, rw, rh, 7)
         self.draw_center_text(rx, ry + 4, rw, "ランキング", 8, 10)
+    
+    def draw_ranking_level_select(self):
+        self.draw_center_text(0, 18, 256, "ランキング", 12, 10)
+        self.draw_center_text(0, 38, 256, "レベルをえらんでね", 8, 7)
+
+        button_x = 20
+        button_y = 48
+        button_w = 216
+        button_h = 16
+        button_gap = 7
+
+        for i, level in enumerate(self.levels):
+            y = button_y + i * (button_h + button_gap)
+
+            pyxel.rect(button_x, y, button_w, button_h, 1)
+            pyxel.rectb(button_x, y, button_w, button_h, 7)
+
+            color = 10 if i == self.selected_ranking_level_index else 7
+            self.draw_center_text(button_x, y + 4, button_w, level["name"], 8, color)
+
+        # タイトルにもどるボタン
+        pyxel.rect(58, 164, 140, 18, 1)
+        pyxel.rectb(58, 164, 140, 18, 7)
+        self.draw_center_text(58, 169, 140, "タイトルにもどる", 8, 7)
+    
+    def update_ranking_count_select(self):
+        button_x = 78
+        button_w = 100
+        button_h = 18
+        start_y = 72
+
+        for i, count in enumerate(self.question_count_options):
+            y = start_y + i * 26
+
+            if self.is_clicked(button_x, y, button_w, button_h):
+                self.selected_ranking_count_index = i
+
+                self.ranking_view_level = self.levels[self.selected_ranking_level_index]
+                self.ranking_view_count = count
+
+                self.scene = "ranking"
+                return
+
+        # レベル選択にもどる
+        if self.is_clicked(58, 158, 140, 18):
+            self.scene = "ranking_level_select"
+            return
+    
+    def draw_ranking_count_select(self):
+        self.draw_center_text(0, 20, 256, "ランキング", 12, 10)
+
+        level = self.levels[self.selected_ranking_level_index]
+
+        self.draw_center_text(0, 46, 256, level["name"], 8, 7)
+        self.draw_center_text(0, 62, 256, "もんだいすうをえらんでね", 8, 10)
+
+        button_x = 78
+        button_w = 100
+        button_h = 18
+        start_y = 88
+
+        for i, count in enumerate(self.question_count_options):
+            y = start_y + i * 24
+
+            pyxel.rect(button_x, y, button_w, button_h, 1)
+            pyxel.rectb(button_x, y, button_w, button_h, 7)
+
+            color = 10 if i == self.selected_ranking_count_index else 7
+            self.draw_center_text(button_x, y + 5, button_w, f"{count}もん", 8, color)
+
+        # レベル選択にもどるボタン
+        pyxel.rect(58, 158, 140, 18, 1)
+        pyxel.rectb(58, 158, 140, 18, 7)
+        self.draw_center_text(58, 163, 140, "レベルにもどる", 8, 7)
 
     def get_font(self, size):
         if size == 10:
@@ -1167,7 +1289,7 @@ class App:
         return False
 
     def draw_name_input(self):
-        self.draw_center_text(0, 12, 256, "きろくこうしん！", 12, 8)
+        self.draw_center_text(0, 12, 256, "きろくこうしん！", 15, 8)
         self.draw_center_text(0, 36, 256, "なまえをいれてね", 8, 10)
 
         self.draw_center_text(
@@ -1216,7 +1338,10 @@ class App:
         self.draw_center_text(0, 12, 256, "ランキング", 12, 10)
 
         # 表示対象のレベルと問題数
-        if self.current_level is not None:
+        if self.ranking_view_level is not None:
+            level = self.ranking_view_level
+            count = self.ranking_view_count
+        elif self.current_level is not None:
             level = self.current_level
             count = self.target_question_count
         else:
@@ -1570,6 +1695,19 @@ class App:
             converted_char = self.handakuten_map.get(last_char)
         else:
             converted_char = None
+
+        if converted_char is not None:
+            self.player_name = before_text + converted_char
+            self.reset_kana_cycle()
+    
+    def apply_small_to_last_char(self):
+        if self.player_name == "":
+            return
+
+        last_char = self.player_name[-1]
+        before_text = self.player_name[:-1]
+
+        converted_char = self.small_char_map.get(last_char)
 
         if converted_char is not None:
             self.player_name = before_text + converted_char
